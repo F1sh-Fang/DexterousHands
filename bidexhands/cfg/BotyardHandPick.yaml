@@ -3,7 +3,7 @@ env:
   env_name: "botyard_hand_pick"
   numEnvs:  512
   envSpacing: 1.0
-  episodeLength: 1200
+  episodeLength: 1000
   enableDebugVis: False
   cameraDebug: False
   pointCloudDebug: False
