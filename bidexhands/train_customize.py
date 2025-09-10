@@ -1,7 +1,8 @@
 import bidexhands as bi
 import torch
 
-env_name = 'ShadowHandOver'
+env_name = 'BotyardHandPick'
+# env_name = 'ShadowHandBlockStack'
 algo = "ppo"
 env = bi.make(env_name, algo)
 

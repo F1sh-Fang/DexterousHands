@@ -291,7 +291,7 @@ class ShadowHandBlockStack(BaseTask):
         lower = gymapi.Vec3(-spacing, -spacing, 0.0)
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
-        asset_root = "../../assets"
+        asset_root = "../assets"
         shadow_hand_asset_file = "mjcf/open_ai_assets/hand/shadow_hand.xml"
         shadow_hand_another_asset_file = "mjcf/open_ai_assets/hand/shadow_hand1.xml"
         table_texture_files = "../assets/textures/texture_stone_stone_texture_0.jpg"

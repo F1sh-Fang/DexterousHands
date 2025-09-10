@@ -410,8 +410,9 @@ class ShadowHandCatchOver2Underarm(BaseTask):
         self.goal_object_indices = []
 
         self.fingertip_handles = [self.gym.find_asset_rigid_body_index(shadow_hand_asset, name) for name in self.fingertips]
+        print(self.fingertip_handles)
         self.fingertip_another_handles = [self.gym.find_asset_rigid_body_index(shadow_hand_another_asset, name) for name in self.a_fingertips]
-
+        print(self.fingertip_another_handles)
         # create fingertip force sensors, if needed
         sensor_pose = gymapi.Transform()
         for ft_handle in self.fingertip_handles:
@@ -618,8 +619,10 @@ class ShadowHandCatchOver2Underarm(BaseTask):
 
         self.fingertip_state = self.rigid_body_states[:, self.fingertip_handles][:, :, 0:13]
         self.fingertip_pos = self.rigid_body_states[:, self.fingertip_handles][:, :, 0:3]
+        print(self.fingertip_pos)
         self.fingertip_another_state = self.rigid_body_states[:, self.fingertip_another_handles][:, :, 0:13]
         self.fingertip_another_pos = self.rigid_body_states[:, self.fingertip_another_handles][:, :, 0:3]
+        print(self.fingertip_another_pos)
 
         if self.obs_type == "full_state":
             self.compute_full_state()

@@ -35,6 +35,9 @@ from bidexhands.tasks.shadow_hand_meta.shadow_hand_meta_mt1 import ShadowHandMet
 from bidexhands.tasks.shadow_hand_meta.shadow_hand_meta_ml1 import ShadowHandMetaML1
 from bidexhands.tasks.shadow_hand_meta.shadow_hand_meta_mt4 import ShadowHandMetaMT4
 
+# Botyard hand
+from bidexhands.tasks.botyard_hand_pick import BotyardHandPick
+
 from bidexhands.tasks.hand_base.vec_task import VecTaskCPU, VecTaskGPU, VecTaskPython, VecTaskPythonArm
 from bidexhands.tasks.hand_base.multi_vec_task import MultiVecTaskPython, SingleVecTaskPythonArm
 from bidexhands.tasks.hand_base.multi_task_vec_task import MultiTaskVecTaskPython
