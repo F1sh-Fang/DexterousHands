@@ -59,7 +59,7 @@ def train():
     runner.train(train_epoch=iterations) if args.algo in META_ALGOS else \
         runner.run(num_learning_iterations=iterations, log_interval=cfg_train["learn"]["save_interval"])
     
-RESUME = True
+RESUME = False
 
 if __name__ == '__main__':
     set_np_formatting()

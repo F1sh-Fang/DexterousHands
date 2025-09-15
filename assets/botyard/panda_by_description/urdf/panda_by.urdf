@@ -569,12 +569,12 @@
       </geometry>
       <material name="grey"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://panda_by_description/meshes/botyard/fallink2.STL"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint name="FALJ3" type="fixed">
     <origin rpy="0 0 1.5708" xyz="-0.028998 -0.018316 0.0554"/>
@@ -596,12 +596,12 @@
       </geometry>
       <material name="grey"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://panda_by_description/meshes/botyard/fallink1.STL"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint name="FALJ2" type="fixed">
     <origin rpy="1.5708 -1.5708 1.5708" xyz="0 0 0.1245"/>
@@ -630,12 +630,12 @@
       </geometry>
       <material name="grey"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://panda_by_description/meshes/botyard/farlink2.STL"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint name="FARJ3" type="fixed">
     <origin rpy="0 0 1.5708" xyz="0.029002 -0.018316 0.0554"/>
@@ -657,12 +657,12 @@
       </geometry>
       <material name="grey"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://panda_by_description/meshes/botyard/farlink1.STL"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint name="FARJ2" type="fixed">
     <origin rpy="1.5708 -1.5708 1.5708" xyz="0 0 0.1245"/>
@@ -691,12 +691,12 @@
       </geometry>
       <material name="grey"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://panda_by_description/meshes/botyard/falink2.STL"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint name="FAJ3" type="revolute">
     <origin rpy="0 0 1.5708" xyz="0 0.022433 0.187"/>
@@ -718,12 +718,12 @@
       </geometry>
       <material name="grey"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://panda_by_description/meshes/botyard/falink1.STL"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint name="FAJ2" type="fixed">
     <origin rpy="0 0 -1.5708" xyz="0 0 0.011"/>
@@ -772,12 +772,12 @@
       </geometry>
       <material name="grey"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="-0.0115 0 0"/>
       <geometry>
         <mesh filename="package://panda_by_description/meshes/botyard/fallink0.STL"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint name="FALJ0" type="fixed">
     <origin rpy="0 0 0" xyz="-0.0175 -0.0256 0.00013378"/>
@@ -805,12 +805,12 @@
       </geometry>
       <material name="grey"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0.0115 0 0"/>
       <geometry>
         <mesh filename="package://panda_by_description/meshes/botyard/farlink0.STL"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint name="FARJ0" type="fixed">
     <origin rpy="0 0 0" xyz="0.0175 -0.0256 0.00013378"/>
@@ -1440,5 +1440,10 @@
     <child link="central"/>
     <axis xyz="0 0 0"/>
   </joint>
-  
+
+  <disable_collisions link1="fabase" link2="thbase" reason="Adjacent"/>
+  <disable_collisions link1="fabase" link2="ffbase" reason="Adjacent"/>
+  <disable_collisions link1="fabase" link2="mfbase" reason="Adjacent"/>
+  <disable_collisions link1="fabase" link2="rfbase" reason="Adjacent"/>
+  <disable_collisions link1="fabase" link2="lfbase" reason="Adjacent"/>
 </robot>

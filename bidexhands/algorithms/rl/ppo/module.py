@@ -28,7 +28,7 @@ class ActorCritic(nn.Module):
         for l in range(len(actor_hidden_dim)):
             if l == len(actor_hidden_dim) - 1:
                 actor_layers.append(nn.Linear(actor_hidden_dim[l], *actions_shape))
-                actor_layers.append(nn.Tanh())
+                # actor_layers.append(nn.Tanh())
             else:
                 actor_layers.append(nn.Linear(actor_hidden_dim[l], actor_hidden_dim[l + 1]))
                 actor_layers.append(activation)

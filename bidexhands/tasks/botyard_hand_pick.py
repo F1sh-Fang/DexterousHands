@@ -18,8 +18,6 @@ import torch
 import open3d as o3d
 import trimesh
 
-
-
 class BotyardHandPick(BaseTask):
     def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless, agent_index=[[[0, 1, 2, 3, 4, 5]], [[0, 1, 2, 3, 4, 5]]], is_multi_agent=False):
         self.cfg = cfg
@@ -231,6 +229,37 @@ class BotyardHandPick(BaseTask):
         self.free_cuda_cache_count = 0
         self.total_successes = 0
         self.total_resets = 0
+        self.point_cloud_debug = True
+
+    def print_dof_info(self, asset):
+        """
+        打印给定asset的所有DOF的名字和索引。
+
+        Args:
+            asset (gymapi.Asset): 从中获取信息的Isaac Gym asset。
+        """
+        # 获取DOF的总数
+        num_dofs = self.gym.get_asset_dof_count(asset)
+        print(f"--- DOF Information for Asset ---")
+        print(f"Total number of DOFs: {num_dofs}")
+
+        # 获取DOF名字的列表
+        dof_names = self.gym.get_asset_dof_names(asset)
+        
+        # 获取DOF属性的字典
+        dof_dict = self.gym.get_asset_dof_dict(asset)
+
+        print("\n--- Mapping by Index ---> Name ---")
+        # 遍历索引，打印名字
+        for i in range(num_dofs):
+            print(f"  Index {i}: {dof_names[i]}")
+
+        print("\n--- Mapping by Name ---> Index ---")
+        # 遍历字典，打印名字和索引
+        for name, idx in dof_dict.items():
+            print(f"  Name '{name}': Index {idx}")
+        
+        print("----------------------------------\n")
 
     def create_sim(self):
         self.dt = self.sim_params.dt
@@ -282,6 +311,64 @@ class BotyardHandPick(BaseTask):
             min_distances = compute_surface_distance_jit(poses_a,poses_b,vertices_a,vertices_b)
 
         return min_distances
+    
+    def set_hand_rigid_body_props(self, env, actor_handle, botyard_hand_asset):
+        if self.hand_shape_name_id_map is None:
+            num_shapes     = self.gym.get_asset_rigid_shape_count(botyard_hand_asset)
+            num_bodies     = self.gym.get_asset_rigid_body_count(botyard_hand_asset)
+            body_names     = self.gym.get_asset_rigid_body_names(botyard_hand_asset)
+            body_shape_map = self.gym.get_asset_rigid_body_shape_indices(botyard_hand_asset)
+            self.hand_shape_name_id_map = {}
+            for i in range(num_bodies):
+                name = body_names[i]
+                shape_idx_range = body_shape_map[i]
+                if shape_idx_range.count > 0:
+                    shape_idx = shape_idx_range.start
+                    self.hand_shape_name_id_map[name] = shape_idx
+                if shape_idx_range.count > 1:
+                    shape_idx = range(shape_idx_range.start, shape_idx_range.start + shape_idx_range.count)
+                    self.hand_shape_name_id_map[name] = shape_idx
+        ## (env, index of the asset) as input
+        if self.hand_rigid_body_props is None:
+            self.hand_rigid_body_props = self.gym.get_actor_rigid_shape_properties(env, actor_handle)
+            finger_name = ['lfdistal', 'rfdistal', 'mfdistal', 'ffdistal', 'thdistal',
+                        'lfmiddle', 'rfmiddle', 'mfmiddle', 'ffmiddle', 'thmiddle',
+                        'lfproximal', 'rfproximal', 'mfproximal', 'ffproximal', 'thproximal']
+            finger_id = [self.hand_shape_name_id_map[name] for name in finger_name]
+            base_name = ['pmbase', 'palm', 'fabase']
+            base_id = [self.hand_shape_name_id_map[name] for name in base_name]
+            th_name = ["thbase", "thproximal", "thmiddle", "thdistal"]
+            th_id = [self.hand_shape_name_id_map[name] for name in th_name]
+            ff_name = ["ffbase", "ffproximal", "ffmiddle", "ffdistal"]
+            ff_id = [self.hand_shape_name_id_map[name] for name in ff_name]
+            mf_name = ["mfbase", "mfproximal", "mfmiddle", "mfdistal"]
+            mf_id = [self.hand_shape_name_id_map[name] for name in mf_name]
+            rf_name = ["rfbase", "rfproximal", "rfmiddle", "rfdistal"]
+            rf_id = [self.hand_shape_name_id_map[name] for name in rf_name]
+            lf_name = ["lfbase", "lfproximal", "lfmiddle", "lfdistal"]
+            lf_id = [self.hand_shape_name_id_map[name] for name in lf_name]
+            for i in range(len(self.hand_rigid_body_props)):
+                if i in [base_id[0], base_id[1]]:
+                    self.hand_rigid_body_props[i].filter = 0b11111
+                elif i in th_id:
+                    self.hand_rigid_body_props[i].filter = (1 << 0)
+                elif i in ff_id:
+                    self.hand_rigid_body_props[i].filter = (1 << 1)
+                elif i in mf_id:
+                    self.hand_rigid_body_props[i].filter = (1 << 2)
+                elif i in rf_id:
+                    self.hand_rigid_body_props[i].filter = (1 << 3)
+                elif i in lf_id:
+                    self.hand_rigid_body_props[i].filter = (1 << 4)
+                else:
+                    self.hand_rigid_body_props[i].filter = 0
+                if i in finger_id:
+                    self.hand_rigid_body_props[i].contact_offset = 0.005
+                    self.hand_rigid_body_props[i].rest_offset = 0.00
+            # props[shape_name_id_map['lfdistal']].filter = (1 << 1)
+            # props[shape_name_id_map['rfdistal']].filter = (1 << 1)
+
+        self.gym.set_actor_rigid_shape_properties(env, actor_handle, self.hand_rigid_body_props) ### (env, index number, properties List)
         
     def _create_envs(self, num_envs, spacing, num_per_row):
         lower = gymapi.Vec3(-spacing, -spacing, 0.0)
@@ -296,22 +383,25 @@ class BotyardHandPick(BaseTask):
         # table_texture_handle = self.gym.create_texture_from_file(self.sim, table_texture_files)
 
         object_asset_file = self.asset_files_dict[self.object_type]
-        object_asset_file = 'botyard/panda_by_description/meshes/object/gelatin_box.urdf'
+        object_asset_file = 'botyard/panda_by_description/meshes/object/box_50mm.urdf'
 
         # load shadow hand_ asset
         asset_options = gymapi.AssetOptions()
         asset_options.flip_visual_attachments = False
+        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
         asset_options.fix_base_link = True
         asset_options.collapse_fixed_joints = False
         asset_options.disable_gravity = True
-        asset_options.thickness = 0.001
-        asset_options.angular_damping = 0.1
-        asset_options.linear_damping = 0.1
+        asset_options.thickness = 0.0001
+        asset_options.armature = 0.001
+        # asset_options.angular_damping = 0.1
+        # asset_options.linear_damping = 0.1
         
 
-        if self.physics_engine == gymapi.SIM_PHYSX:
-            asset_options.use_physx_armature = True
-        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
+        # if self.physics_engine == gymapi.SIM_PHYSX:
+        #     asset_options.use_physx_armature = True
+        asset_options.use_physx_armature = True
+        
         print("hand")
         botyard_hand_asset = self.gym.load_asset(self.sim, asset_root, botyard_hand_asset_file, asset_options)
         print("hand loaded")
@@ -334,13 +424,13 @@ class BotyardHandPick(BaseTask):
         t_damping = 0.1
         # relevant_tendons = ["robot0:T_FFJ1c", "robot0:T_MFJ1c", "robot0:T_RFJ1c", "robot0:T_LFJ1c"]
         # a_relevant_tendons = ["robot1:T_FFJ1c", "robot1:T_MFJ1c", "robot1:T_RFJ1c", "robot1:T_LFJ1c"]
-        tendon_props = self.gym.get_asset_tendon_properties(botyard_hand_asset)
+        # tendon_props = self.gym.get_asset_tendon_properties(botyard_hand_asset)
 
-        for i in range(self.num_botyard_hand_tendons):
-            tendon_props[i].limit_stiffness = limit_stiffness
-            tendon_props[i].damping = t_damping
+        # for i in range(self.num_botyard_hand_tendons):
+        #     tendon_props[i].limit_stiffness = limit_stiffness
+        #     tendon_props[i].damping = t_damping
 
-        self.gym.set_asset_tendon_properties(botyard_hand_asset, tendon_props)
+        # self.gym.set_asset_tendon_properties(botyard_hand_asset, tendon_props)
         
         self.actuated_dof_indices = [i for i in range(self.num_botyard_hand_dofs)]
 
@@ -364,16 +454,25 @@ class BotyardHandPick(BaseTask):
             self.botyard_hand_dof_default_vel.append(0.0)
 
         for i in range(7, self.num_botyard_hand_dofs):
-            botyard_hand_dof_props['stiffness'][i] = 5
-            botyard_hand_dof_props['damping'][i] = 0.1
+            botyard_hand_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
+            botyard_hand_dof_props['stiffness'][i] = 100
+            botyard_hand_dof_props['damping'][i] = 20
             botyard_hand_dof_props['effort'][i] = 0.5
+            # botyard_hand_dof_props['armature'][i] = 0.002
 
-        x_arm_dof_effort = to_torch([10, 10, 6, 6, 6, 4, 4], dtype=torch.float, device=self.device)
-        
+        x_arm_dof_effort = to_torch([87, 87, 87, 87, 12, 12, 12], dtype=torch.float, device=self.device)
+
         for i in range(0, 7):
-            botyard_hand_dof_props['stiffness'][i] = 50
-            botyard_hand_dof_props['damping'][i] = 1
+            botyard_hand_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
+            botyard_hand_dof_props['stiffness'][i] = 10000
+            botyard_hand_dof_props['damping'][i] = 200
             botyard_hand_dof_props['effort'][i] = x_arm_dof_effort[i]
+            # botyard_hand_dof_props['armature'][i] = 0.01
+
+        # botyard_hand_dof_props["stiffness"].fill(625.0)
+        # botyard_hand_dof_props["damping"].fill(50.0)
+        self.hand_rigid_body_props = None
+        self.hand_shape_name_id_map = None
 
         self.actuated_dof_indices = to_torch(self.actuated_dof_indices, dtype=torch.long, device=self.device)
         self.botyard_hand_dof_lower_limits = to_torch(self.botyard_hand_dof_lower_limits, device=self.device)
@@ -450,11 +549,12 @@ class BotyardHandPick(BaseTask):
 
         self.fingertips = ['lfdistal', 'rfdistal', 'mfdistal', 'ffdistal', 'thdistal'] 
         self.fingertip_handles = [self.gym.find_asset_rigid_body_index(botyard_hand_asset, name) for name in self.fingertips]
-        self.ee_handle = self.gym.find_asset_rigid_body_index(botyard_hand_asset, "palm")
+        self.ee_handle = self.gym.find_asset_rigid_body_index(botyard_hand_asset, "central")
         self.dof_J1_name = ["FFJ1", "MFJ1", "RFJ1", "LFJ1"]
         self.dof_J2_name = ["FFJ2", "MFJ2", "RFJ2", "LFJ2"]
         self.dof_J1_index = [self.gym.find_asset_dof_index(botyard_hand_asset, name) for name in self.dof_J1_name]
         self.dof_J2_index = [self.gym.find_asset_dof_index(botyard_hand_asset, name) for name in self.dof_J2_name]
+        self.print_dof_info(botyard_hand_asset)
         print("dof_J1_index",self.dof_J1_index,"dof_J2_index",self.dof_J2_index)
 
         #############################################################################################
@@ -464,7 +564,8 @@ class BotyardHandPick(BaseTask):
 
         self.num_surface_samples = 512 
         fingertip_mesh_path_list = ["../assets/botyard/panda_by_description/meshes/botyard/" + name + ".STL" for name in self.fingertips]
-        object_mesh_path = "assets/botyard/panda_by_description/meshes/object/009_gelatin_box/nontextured.stl" 
+        # object_mesh_path = "../assets/botyard/panda_by_description/meshes/object/009_gelatin_box/google_16k/nontextured.stl" 
+        object_mesh_path = "../assets/botyard/panda_by_description/meshes/object/box_50mm/box.stl" 
         all_fingertips_vertices_local_list = []
         
         for i in range(len(fingertip_mesh_path_list)):
@@ -474,18 +575,22 @@ class BotyardHandPick(BaseTask):
             try:
                 mesh = trimesh.load(path)
                 samples_np, _ = trimesh.sample.sample_surface(mesh, self.num_surface_samples)
-                self.body_vertices[name] = to_torch(samples_np, device=self.device, dtype=torch.float)
+                vertice = to_torch(samples_np, device=self.device, dtype=torch.float)
+                self.body_vertices[name] = vertice.unsqueeze(0).expand(num_envs, -1, -1)
+                
                 # print(f"  - 成功为 '{name}' ({path}) 采样 {samples_torch.shape[0]} 个点。")
             except Exception as e:
                 print(f"  - 警告: 加载或采样 ({path}) 失败: {e}")
-                self.body_vertices[name] = torch.zeros((self.num_surface_samples, 3), device=self.device)
+                self.body_vertices[name] = torch.zeros((self.num_surface_samples, self.num_surface_samples, 3), device=self.device)
 
         try:
             mesh = trimesh.load(object_mesh_path)
             samples_np, _ = trimesh.sample.sample_surface(mesh, self.num_surface_samples)
-            self.body_vertices["object"] = to_torch(samples_np, device=self.device, dtype=torch.float)
+            vertice = to_torch(samples_np, device=self.device, dtype=torch.float)
+            self.body_vertices["object"] = vertice.unsqueeze(0).expand(num_envs, -1, -1)
         except Exception as e:
-            self.body_vertices["object"] = torch.zeros((self.num_surface_samples, 3), device=self.device)
+            print(f"  - 警告: 加载或采样 ({object_mesh_path}) 失败: {e}")
+            self.body_vertices["object"] = torch.zeros((self.num_surface_samples, self.num_surface_samples, 3), device=self.device)
         
         #######################################################################################################
         fingertip_local_indices = self.fingertip_handles
@@ -516,7 +621,7 @@ class BotyardHandPick(BaseTask):
             self.hand_start_states.append([botyard_hand_start_pose.p.x, botyard_hand_start_pose.p.y, botyard_hand_start_pose.p.z,
                                            botyard_hand_start_pose.r.x, botyard_hand_start_pose.r.y, botyard_hand_start_pose.r.z, botyard_hand_start_pose.r.w,
                                            0, 0, 0, 0, 0, 0])
-            
+            self.set_hand_rigid_body_props(env_ptr, botyard_hand_actor, botyard_hand_asset)
             self.gym.set_actor_dof_properties(env_ptr, botyard_hand_actor, botyard_hand_dof_props)
             hand_idx = self.gym.get_actor_index(env_ptr, botyard_hand_actor, gymapi.DOMAIN_SIM)
             self.hand_indices.append(hand_idx)
@@ -609,7 +714,8 @@ class BotyardHandPick(BaseTask):
             self.max_episode_length, self.object_pos, self.object_rot, self.goal_pos, self.goal_rot, self.botyard_right_hand_pos, self.botyard_right_hand_pos,
             self.dist_reward_scale, self.rot_reward_scale, self.rot_eps, self.actions, self.action_penalty_scale,
             self.success_tolerance, self.reach_goal_bonus, self.fall_dist, self.fall_penalty,
-            self.max_consecutive_successes, self.av_factor, (self.object_type == "pen"), self.finger_mid_dis, self.postive_distance_mod, self.fingertip_distance
+            self.max_consecutive_successes, self.av_factor, (self.object_type == "pen"), self.finger_mid_dis, self.postive_distance_mod, self.fingertip_distance,
+            self.ee_obj_rot_cos
         )
         
         if visdebug:
@@ -690,6 +796,11 @@ class BotyardHandPick(BaseTask):
                 name = self.fingertips[i]
                 self.table_distance[:, i] = self.get_surface_distance(name,"table")
             
+            ################################################## ee y ########
+            ee_forward_world = quat_apply(self.ee_rot, self.y_unit_tensor)
+            hand_to_object_world = self.object_pos - self.ee_pos
+            self.ee_obj_rot_cos = torch.sum(torch.nn.functional.normalize(ee_forward_world, dim=1) * 
+                                    torch.nn.functional.normalize(hand_to_object_world, dim=1), dim=1)
 
             # self.fingertip_distance = torch.zeros((self.num_envs, 2), dtype=torch.float32, device="cuda")
             # self.fingertip_distance[:,0] = self.get_surface_distance(self.fingertips[-1],self.fingertips[-2])
@@ -697,7 +808,7 @@ class BotyardHandPick(BaseTask):
             # self.fingertip_distance = torch.mean(self.fingertip_distance, dim=-1, keepdim=True)
             self.fingertip_distance = (self.get_surface_distance(self.fingertips[-1],self.fingertips[-3]) + self.get_surface_distance(self.fingertips[-1],self.fingertips[-2])) / 2.0
             self.compute_full_state()
-
+            
             if self.asymmetric_obs:
                 self.compute_full_state(True)
 
@@ -721,6 +832,8 @@ class BotyardHandPick(BaseTask):
 
         self.obs_buf[:, 0:self.num_botyard_hand_dofs] = unscale(self.botyard_hand_dof_pos,
                                                             self.botyard_hand_dof_lower_limits, self.botyard_hand_dof_upper_limits)
+        # print("1",self.botyard_hand_dof_pos)
+        # print("2",self.obs_buf[:, 0:self.num_botyard_hand_dofs])
         self.obs_buf[:, self.num_botyard_hand_dofs:2*self.num_botyard_hand_dofs] = self.vel_obs_scale * self.botyard_hand_dof_vel
         
         # self.obs_buf[:, 2*self.num_allegro_hand_dofs:3*self.num_allegro_hand_dofs] = self.force_torque_obs_scale * self.dof_force_tensor[:, :24]
@@ -890,6 +1003,10 @@ class BotyardHandPick(BaseTask):
             
         self.cur_targets[:, self.dof_J1_index] = self.cur_targets[:, self.dof_J2_index]
         self.cur_targets[:, :]
+        print("target",self.prev_targets[0, :7])
+        print("actual",self.botyard_hand_dof_pos[0,:7])
+        print("err", self.cur_targets[0, :7] - self.botyard_hand_dof_pos[0,:7])
+        # print("final",self.cur_targets[0,:])
         # print(self.cur_targets[0,:])
         self.prev_targets[:, :] = self.cur_targets[:, :]
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
@@ -943,7 +1060,7 @@ def compute_hand_reward(
     actions, action_penalty_scale: float,
     success_tolerance: float, reach_goal_bonus: float, fall_dist: float,
     fall_penalty: float, max_consecutive_successes: int, av_factor: float, ignore_z_rot: bool,
-    finger_mid_dis, postive_distance_mod, fingertip_distance
+    finger_mid_dis, postive_distance_mod, fingertip_distance, ee_obj_rot_cos
 ):
     # Distance from the hand to the object
     goal_dist = torch.norm(target_pos - object_pos, p=2, dim=-1)
@@ -965,7 +1082,8 @@ def compute_hand_reward(
     reward2 = torch.exp(-10 * finger_mid_dis.t())
     reward3 = torch.exp(-10 * postive_distance_mod.t())
     # reward4 = torch.exp(-10 * fingertip_distance.t())
-    reward =  reward1 + 0.4 * reward2 + 0.5 * reward3  #+ 0.02 * reward4
+    reward5 = ee_obj_rot_cos * 0.5
+    reward =  reward1 + 0.4 * reward2 + 0.5 * reward3 + reward5 #+ 0.02 * reward4
     # print("reward before:", reward)
 
     # Find out which envs hit the goal and update successes count
@@ -979,8 +1097,9 @@ def compute_hand_reward(
     reward = torch.where(object_pos[:, 2] <= 0.2, reward + fall_penalty, reward)
 
     # Check env termination conditions, including maximum success number
-    resets = torch.where(object_pos[:, 2] <= 0.1, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where(right_hand_pos[:, 1] <= -0.8, torch.ones_like(resets), resets)
+    resets = torch.where(object_pos[:, 2] <= 0.2, torch.ones_like(reset_buf), reset_buf)
+    resets = torch.where(right_hand_pos[:, 2] <= 0.3, torch.ones_like(resets), resets)
+    resets = torch.where(right_hand_pos[:, 0] <= -0.2, torch.ones_like(resets), resets)
 
     if max_consecutive_successes > 0:
         # Reset progress buffer on goal envs if max_consecutive_successes > 0
@@ -1038,9 +1157,8 @@ def compute_table_distance_jit(poses_a, vertices_a, table_height: float):
 
     rot_a_expanded = rot_a.unsqueeze(1).expand(-1, num_samples, -1)
     pos_a_expanded = pos_a.unsqueeze(1)
-    vertices_a_expanded = vertices_a.unsqueeze(0).expand(num_envs, -1, -1)
 
-    pcd_a_world = quat_apply(rot_a_expanded, vertices_a_expanded) + pos_a_expanded
+    pcd_a_world = quat_apply(rot_a_expanded, vertices_a) + pos_a_expanded
     
     # 只计算Z轴方向的距离
     pcd_a_world_z = pcd_a_world[..., 2]
@@ -1080,13 +1198,11 @@ def compute_surface_distance_jit(poses_a, poses_b, vertices_a, vertices_b):
     pos_a_expanded = pos_a.unsqueeze(1)
     pos_b_expanded = pos_b.unsqueeze(1)
 
-    # 扩展局部顶点张量
-    vertices_a_expanded = vertices_a.unsqueeze(0).expand(num_envs, -1, -1)
-    vertices_b_expanded = vertices_b.unsqueeze(0).expand(num_envs, -1, -1)
+    
 
     # 计算世界坐标系中的点云
-    pcd_a_world = quat_apply(rot_a_expanded, vertices_a_expanded) + pos_a_expanded
-    pcd_b_world = quat_apply(rot_b_expanded, vertices_b_expanded) + pos_b_expanded
+    pcd_a_world = quat_apply(rot_a_expanded, vertices_a) + pos_a_expanded
+    pcd_b_world = quat_apply(rot_b_expanded, vertices_b) + pos_b_expanded
     # 两个点云的形状都是: (num_envs, num_samples, 3)
 
     # 3. 高效计算距离矩阵
@@ -1108,82 +1224,55 @@ if __name__ ==  "__main__":
 
     obs = env.reset()
     terminated = False
-
+    cnt = 0
     while not terminated:
-        act = torch.tensor(env.action_space.sample()).repeat((env.num_envs, 1))
+        # act = torch.tensor(env.action_space.sample()).repeat((env.num_envs, 1)) * 0.1
+        act = torch.zeros(29)
+        # a = [10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23, 24, 27, 28]
+        # j4 = [9, 13, 17, 21, 25]
+        # act[a] = -1.0
+        if cnt > 50:
+            #act[j4] = -1
+            act[5] = -0.5
+            act[2] = -0.5
+        else:
+            # act[j4] = 1
+            act[5] = 0.5
+            act[2] = 0.5
+        act = act.repeat((env.num_envs, 1))
+        # print("action: " + str(act[1,:]))
         obs, reward, done, info = env.step(act)
-
-
-
-    # def get_surface_distance_noJIT(self, name_a: str, name_b: str):
-    #     """
-    #     计算两个已注册的单个刚体之间的近似表面距离。
-
-    #     Args:
-    #         name_a (str): 数据库中第一个物体的名字 (例如, "if5")。
-    #         name_b (str): 数据库中第二个物体的名字 (例如, "object")。
-
-    #     Returns:
-    #         一个形状为 (num_envs,) 的张量，包含了所有环境中A和B之间的最短表面距离。
-    #     """
-    #     if "table" in name_b:
-    #         indices_a = self.body_indices[name_a]    # 形状: (num_envs,)
-    #         vertices_a = self.body_vertices[name_a]  # 形状: (num_samples, 3)
-    #         poses_a = self.rigid_body_states[:, self.body_handles[name_a], :13] # 形状: (num_envs, 13)
-    #         pos_a, rot_a = poses_a[:, 0:3], poses_a[:, 3:7] # [nums_env, 3] [nums_env, 4]
-    #         rot_a_expanded = rot_a.unsqueeze(1).expand(-1, self.num_surface_samples, -1)
-    #         vertices_a_expanded = vertices_a.unsqueeze(0).expand(self.num_envs, -1, -1)
-    #         pcd_a_world = quat_apply(rot_a_expanded, vertices_a_expanded) + pos_a.unsqueeze(1) #(num_envs, num_samples, 3)
-    #         pcd_a_world_z = pcd_a_world[..., 2] - torch.tensor([self.table_height],device='cuda').unsqueeze(1).unsqueeze(2)
-    #         dist_flat = pcd_a_world_z.view(self.num_envs, -1)
-    #         min_distances, _ = torch.min(dist_flat, dim=1)
-    #     else:
-    #         # 1. 从数据库中查找输入数据
-    #         indices_a = self.body_indices[name_a]    # 形状: (num_envs,)
-    #         vertices_a = self.body_vertices[name_a]  # 形状: (num_samples, 3)
-    #         indices_b = self.body_indices[name_b]    # 形状: (num_envs,)
-    #         vertices_b = self.body_vertices[name_b]  # 形状: (num_samples, 3)
-
-    #         # 2. 获取实时位姿
-    #         if "object" in name_a:
-    #             poses_a = self.root_state_tensor[indices_a, :13] # 形状: (num_envs, 13)
-    #         else:
-    #             poses_a = self.rigid_body_states[:, self.body_handles[name_a], :13] # 形状: (num_envs, 13)
-
-    #         if "object" in name_b:
-    #             poses_b = self.root_state_tensor[indices_b, :13] # 形状: (num_envs, 13)
-    #         else:
-    #             poses_b = self.rigid_body_states[:, self.body_handles[name_b], :13] # 形状: (num_envs, 13)
-
-    #         pos_a, rot_a = poses_a[:, 0:3], poses_a[:, 3:7] # [nums_env, 3] [nums_env, 4]
-    #         pos_b, rot_b = poses_b[:, 0:3], poses_b[:, 3:7]
-    #         # print(rot_a.shape, vertices_a.shape, poses_a.shape)
-    #         #torch.Size([8, 4]) torch.Size([256, 3]) torch.Size([8, 13])
-
-    #         # 3. 变换点云到世界坐标系
-    #         # 使用 unsqueeze(1) 来匹配广播规则 [nums_env, 1,  4] [1, num_samples, 3]   [nums_env, 1,  3]
-    #         rot_a_expanded = rot_a.unsqueeze(1).expand(-1, self.num_surface_samples, -1)
-    #         rot_b_expanded = rot_b.unsqueeze(1).expand(-1, self.num_surface_samples, -1)
-    #         # 现在形状是 (num_envs, num_samples, 4)
-
-    #         # b. 将局部顶点张量扩展，为每个环境复制一份顶点
-    #         # vertices_a.unsqueeze(0): (1, num_samples, 3)
-    #         # .expand(self.num_envs, -1, -1): 保持第1和2维不变，将第0维扩展到 num_envs
-    #         vertices_a_expanded = vertices_a.unsqueeze(0).expand(self.num_envs, -1, -1)
-    #         vertices_b_expanded = vertices_b.unsqueeze(0).expand(self.num_envs, -1, -1)
-    #         pcd_a_world = quat_apply(rot_a_expanded, vertices_a_expanded) + pos_a.unsqueeze(1)
-    #         pcd_b_world = quat_apply(rot_b_expanded, vertices_b_expanded) + pos_b.unsqueeze(1)
-    #         # 两个点云的形状都是: (num_envs, num_samples, 3)
-    #         # point_cloud = o3d.geometry.PointCloud()
-    #         # point_cloud.points = o3d.utility.Vector3dVector(pcd_a_world.squeeze(0).cpu().numpy())
-    #         # o3d.visualization.draw_geometries([point_cloud])
-
-    #         # 4. 使用 torch.cdist 高效计算距离矩阵
-    #         dist_matrix = torch.cdist(pcd_a_world, pcd_b_world) 
-    #         # dist_matrix 的形状为: (num_envs, num_samples, num_samples)
-
-    #         # 5. 从距离矩阵中找到每个环境的最小值
-    #         dist_flat = dist_matrix.view(self.num_envs, -1)
-    #         min_distances, _ = torch.min(dist_flat, dim=1)
-        
-    #     return min_distances
+        cnt += 1
+        if cnt > 100:
+            cnt = 0
+# 9, 13, 17, 21, 25
+#8 9 10 14 18 21 26
+#   Name 'FAJ1': Index 8
+#   Name 'FAJ3': Index 7
+#   Name 'FFJ1': Index 12
+#   Name 'FFJ2': Index 11
+#   Name 'FFJ3': Index 10
+#   Name 'FFJ4': Index 9
+#   Name 'LFJ1': Index 16
+#   Name 'LFJ2': Index 15
+#   Name 'LFJ3': Index 14
+#   Name 'LFJ4': Index 13
+#   Name 'MFJ1': Index 20
+#   Name 'MFJ2': Index 19
+#   Name 'MFJ3': Index 18
+#   Name 'MFJ4': Index 17
+#   Name 'RFJ1': Index 24
+#   Name 'RFJ2': Index 23
+#   Name 'RFJ3': Index 22
+#   Name 'RFJ4': Index 21
+#   Name 'THJ1': Index 28
+#   Name 'THJ2': Index 27
+#   Name 'THJ3': Index 26
+#   Name 'THJ4': Index 25
+#   Name 'joint1': Index 0
+#   Name 'joint2': Index 1
+#   Name 'joint3': Index 2
+#   Name 'joint4': Index 3
+#   Name 'joint5': Index 4
+#   Name 'joint6': Index 5
+#   Name 'joint7': Index 6
