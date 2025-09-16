@@ -12,7 +12,7 @@ env:
   stiffnessScale: 1.0
   forceLimitScale: 1.0
   useRelativeControl: False
-  dofSpeedScale: 20.0
+  dofSpeedScale: 1.0
   actionsMovingAverage: 1.0
   controlFrequencyInv: 1 # 60 Hz
 

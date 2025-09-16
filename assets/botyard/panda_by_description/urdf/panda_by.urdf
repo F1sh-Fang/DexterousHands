@@ -1435,7 +1435,7 @@
   </joint>
   <link name="central"/>
   <joint name="CJ0" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0.02335 0.045"/>
+    <origin rpy="0 -1.57 1.57" xyz="0 0.02335 0.045"/>
     <parent link="palm"/>
     <child link="central"/>
     <axis xyz="0 0 0"/>

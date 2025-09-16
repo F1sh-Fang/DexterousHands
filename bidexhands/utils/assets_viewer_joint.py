@@ -99,15 +99,14 @@ def main():
     env = gym.create_env(sim, gymapi.Vec3(-2,-2,0), gymapi.Vec3(2,2,2), 1)
     pose = gymapi.Transform()
     pose.p = gymapi.Vec3(0.0, 0.0, 0.5)
-    actor_handle = gym.create_actor(env, asset, pose, "hand", 0, 0, 0)
+    actor_handle = gym.create_actor(env, asset, pose, "MyRobot", 0, 0, 0)
     gym.set_actor_dof_properties(env, actor_handle, dof_props)
 
     # --- 4. 准备张量 ---
     gym.refresh_dof_state_tensor(sim)
     dof_state_tensor = gym.acquire_dof_state_tensor(sim)
     dof_state = gymtorch.wrap_tensor(dof_state_tensor)
-    dof_state[0:7,0] = torch.tensor([0,-1.3,0,-2.4,0,2.66,0])
-    gym.set_dof_state_tensor(sim, gymtorch.unwrap_tensor(dof_state))
+    
     initial_dof_pos = dof_state[:, 0].clone()
     dof_targets = initial_dof_pos.clone()
 
@@ -122,19 +121,6 @@ def main():
     gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_S,"S")     
     gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_R,"R") 
     gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_P,"P") 
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_UP,"up") 
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_DOWN,"down")
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_LEFT,"left") 
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_RIGHT,"right")
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_PAGE_UP,"pup") 
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_PAGE_DOWN,"pdown")
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_1,"1")      
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_2,"2")     
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_3,"3") 
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_4,"4") 
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_5,"5") 
-    gym.subscribe_viewer_keyboard_event(viewer, gymapi.KEY_6,"6") 
-
 
     # {'link0': 0, 'link1': 1, 'link2': 2, 'link3': 3, 'link4': 4, 'link5': range(5, 8), 'link6': 8, 'link7': 9, 
     #  'fabase': 10, 'pmbase': 11, 'palm': 12, 'ffbase': 13, 'ffproximal': 14, 'ffmiddle': 15, 'ffdistal': 16, 
@@ -183,17 +169,7 @@ def main():
     # --- 5. 主循环 ---
     current_dof_idx = 0
     angle_step = 0.1
-    ############ ik #####################
-    gym.prepare_sim(sim)
-    _jacobian = gym.acquire_jacobian_tensor(sim, "hand")
-    jacobian = gymtorch.wrap_tensor(_jacobian)
     ee_handle = gym.find_asset_rigid_body_index(asset, "central")
-    j_eef = jacobian[:, ee_handle - 1, :, :7]
-
-    print("\n--- INTERACTIVE PD CONTROL ---")
-    print("  UP/DOWN: Select | LEFT/RIGHT: Change Target | R: Reset | P: Print | V: View | Q/ESC: Quit\n")
-    last = False
-    num_hand_dofs = num_dofs - 7
     rigid_body_tensor = gym.acquire_rigid_body_state_tensor(sim)
     gym.refresh_rigid_body_state_tensor(sim)
     rigid_body_tensor = gymtorch.wrap_tensor(rigid_body_tensor)
@@ -201,107 +177,59 @@ def main():
     ee_pose   = rigid_body_states[ee_handle, 0:7]
     ee_pos    = rigid_body_states[ee_handle, 0:3]
     ee_quat   = rigid_body_states[ee_handle, 3:7]
-    ee_home_pose = torch.tensor([0.415, 0, 1.31,0,0,0])
-    ee_target_pose = ee_home_pose.clone()
+    ee_rot    = R.from_quat(ee_quat).as_euler('xyz', degrees=False)
+    print("\n--- INTERACTIVE PD CONTROL ---")
+    print("  UP/DOWN: Select | LEFT/RIGHT: Change Target | R: Reset | P: Print | V: View | Q/ESC: Quit\n")
+    last = False
     while not gym.query_viewer_has_closed(viewer):
-        gym.refresh_jacobian_tensors(sim)
-        gym.refresh_rigid_body_state_tensor(sim)
+        
         for evt in gym.query_viewer_action_events(viewer):
             if evt.action == "QUIT":
                 gym.destroy_viewer(viewer); gym.destroy_sim(sim); return
             # ... (键盘事件处理逻辑) ...
             if evt.action == "A":
                 if not last:
-                    current_dof_idx = (current_dof_idx - 1 + num_hand_dofs) % num_hand_dofs
+                    current_dof_idx = (current_dof_idx - 1 + num_dofs) % num_dofs
                     last = True
                 else:
                     last = False
             elif evt.action == "D":
                 if not last:
-                    current_dof_idx = (current_dof_idx + 1) % num_hand_dofs
+                    current_dof_idx = (current_dof_idx + 1) % num_dofs
                     last = True
                 else:
                     last = False
             elif evt.action == "S":
-                dof_targets[current_dof_idx + 7] -= angle_step
+                dof_targets[current_dof_idx] -= angle_step
             elif evt.action == "W":
-                dof_targets[current_dof_idx + 7] += angle_step
+                dof_targets[current_dof_idx] += angle_step
             elif evt.action == "R":
-                dof_targets[current_dof_idx + 7] = initial_dof_pos[current_dof_idx + 7]
+                dof_targets[current_dof_idx] = initial_dof_pos[current_dof_idx]
             elif evt.action == "P":
                 gym.refresh_dof_state_tensor(sim)
                 current_pos = dof_state[:, 0]
                 print("\n--- Angles (Pos | Target) ---")
                 for i in range(num_dofs):
                     print(f"  {dof_names[i]}: {current_pos[i]:.3f} | {dof_targets[i]:.3f}")
-            elif evt.action == "up":
-                ee_target_pose[0] += 0.01
-            elif evt.action == "down":
-                ee_target_pose[0] += -0.01
-            elif evt.action == "left":
-                ee_target_pose[1] += 0.01
-            elif evt.action == "right":
-                ee_target_pose[1] += -0.01
-            elif evt.action == "pup":
-                ee_target_pose[2] += 0.01
-            elif evt.action == "pdown":
-                ee_target_pose[2] += -0.01
-            elif evt.action == "1":
-                ee_target_pose[3] += 0.05
-            elif evt.action == "2":
-                ee_target_pose[3] += -0.05
-            elif evt.action == "3":
-                ee_target_pose[4] += 0.05
-            elif evt.action == "4":
-                ee_target_pose[4] += -0.05
-            elif evt.action == "5":
-                ee_target_pose[5] += 0.05
-            elif evt.action == "6":
-                ee_target_pose[5] += -0.05
         
-        # target_euler_cpu = ee_target_pose[3:6].cpu().numpy()
-        # target_quat_xyzw = R.from_euler('xyz', target_euler_cpu).as_quat()
-        # goal_rot = torch.tensor(target_quat_xyzw, device=DEVICE)
-        # goal_pos = ee_target_pose[0:3]
-        # pos_err = goal_pos - ee_pos
-        # orn_err = orientation_error(goal_rot.unsqueeze(0), ee_quat.unsqueeze(0)).squeeze(0)
-        # dpose = torch.cat([pos_err, orn_err], dim=-1).unsqueeze(-1)
-        # dof_vel = control_ik(dpose, j_eef)
-        # dof_targets[:7] = dof_state[:7] + tensor_clamp(dof_vel, -0.1, 0.1) # 限制单步最大增量
-        ee_dpose = ee_target_pose.clone()
-        ee_target_quat = torch.tensor(R.from_euler("xyz",ee_target_pose[3:6],degrees=False).as_quat())
-        ee_dpose[0:3] -= ee_pos
-        ee_dpose[3:6] = orientation_error(ee_target_quat.unsqueeze(0),ee_quat.unsqueeze(0))
-        dof_targets[:7] = dof_state[:7, 0] + control_ik(ee_dpose,j_eef)
         dof_targets = tensor_clamp(dof_targets, dof_lower_limits, dof_upper_limits)
         gym.set_dof_position_target_tensor(sim, gymtorch.unwrap_tensor(dof_targets))
         
         gym.simulate(sim)
         gym.fetch_results(sim, True)
-        
+        gym.refresh_rigid_body_state_tensor(sim)
         gym.refresh_dof_state_tensor(sim)
         current_pos = dof_state[:, 0]
         
-        target_angle = dof_targets[current_dof_idx + 7]
-        current_angle = current_pos[current_dof_idx + 7]
-        print(f"\rControlling: {dof_names[current_dof_idx + 7]} | Target: {target_angle:.3f} | Current: {current_angle:.3f} | ee: [{', '.join([f'{x:.3f}' for x in ee_pose])}] | target: [{', '.join([f'{x:.3f}' for x in ee_target_pose])}]", end="")
+        target_angle = dof_targets[current_dof_idx]
+        current_angle = current_pos[current_dof_idx]
+        ee_rot    = R.from_quat(ee_quat).as_euler('xyz', degrees=False)
+        # print(f"\rControlling: {dof_names[current_dof_idx]} | Target: {target_angle:.3f} | Current: {current_angle:.3f}", end="")
+        print(f"\rControlling: {dof_names[current_dof_idx]} | Target: {target_angle:.3f} | Current: {current_angle:.3f} | ee: {ee_pos},{ee_rot} |d", end="")
 
         gym.step_graphics(sim)
         gym.draw_viewer(viewer, sim, True)
         gym.sync_frame_time(sim)
-
-
-def orientation_error(desired, current):
-    cc = quat_conjugate(current)
-    q_r = quat_mul(desired, cc)
-    return q_r[:, 0:3] * torch.sign(q_r[:, 3]).unsqueeze(-1)
-
-def control_ik(dpose, j_eef, num_envs=1, damping=0.05):
-    # solve damped least squares
-    j_eef_T = torch.transpose(j_eef, 1, 2)
-    lmbda = torch.eye(6, device=DEVICE) * (damping ** 2)
-    u = (j_eef_T @ torch.inverse(j_eef @ j_eef_T + lmbda) @ dpose).view(num_envs, 7)
-    return u
 
 def get_shape_map(gym, asset):
     num_shapes    = gym.get_asset_rigid_shape_count(asset)

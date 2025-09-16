@@ -41,7 +41,7 @@ class BotyardHandPick(BaseTask):
         self.fall_penalty = self.cfg["env"]["fallPenalty"]
         self.rot_eps = self.cfg["env"]["rotEps"]
 
-        self.vel_obs_scale = 1#0.2  # scale factor of velocity based observations
+        self.vel_obs_scale = 0.2  # scale factor of velocity based observations
         self.force_torque_obs_scale = 10.0  # scale factor of velocity based observations
 
         self.reset_position_noise = self.cfg["env"]["resetPositionNoise"]
@@ -115,16 +115,13 @@ class BotyardHandPick(BaseTask):
 
         self.cfg["env"]["numObservations"] = self.num_obs_dict[self.obs_type]
         self.cfg["env"]["numStates"] = num_states
-
-        ## action space
-        ## 6 dof ee ; FAJ3 JAJ1 THJ4321 FFJ432 MFJ432 RFJ432 LFJ432 ; 24
         if self.is_multi_agent:
             self.num_agents = 2
             self.cfg["env"]["numActions"] = 22
             
         else:
             self.num_agents = 1
-            self.cfg["env"]["numActions"] = 24
+            self.cfg["env"]["numActions"] = 29
 
         self.cfg["device_type"] = device_type
         self.cfg["device_id"] = device_id
@@ -316,7 +313,7 @@ class BotyardHandPick(BaseTask):
         return min_distances
     
     def set_hand_rigid_body_props(self, env, actor_handle, botyard_hand_asset):
-        if True:#self.hand_shape_name_id_map is None:
+        if self.hand_shape_name_id_map is None:
             num_shapes     = self.gym.get_asset_rigid_shape_count(botyard_hand_asset)
             num_bodies     = self.gym.get_asset_rigid_body_count(botyard_hand_asset)
             body_names     = self.gym.get_asset_rigid_body_names(botyard_hand_asset)
@@ -332,7 +329,7 @@ class BotyardHandPick(BaseTask):
                     shape_idx = range(shape_idx_range.start, shape_idx_range.start + shape_idx_range.count)
                     self.hand_shape_name_id_map[name] = shape_idx
         ## (env, index of the asset) as input
-        if True:#self.hand_rigid_body_props is None:
+        if self.hand_rigid_body_props is None:
             self.hand_rigid_body_props = self.gym.get_actor_rigid_shape_properties(env, actor_handle)
             finger_name = ['lfdistal', 'rfdistal', 'mfdistal', 'ffdistal', 'thdistal',
                         'lfmiddle', 'rfmiddle', 'mfmiddle', 'ffmiddle', 'thmiddle',
@@ -389,24 +386,24 @@ class BotyardHandPick(BaseTask):
         object_asset_file = 'botyard/panda_by_description/meshes/object/box_50mm.urdf'
 
         # load shadow hand_ asset
-        hand_asset_options = gymapi.AssetOptions()
-        hand_asset_options.flip_visual_attachments = False
-        hand_asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
-        hand_asset_options.fix_base_link = True
-        hand_asset_options.collapse_fixed_joints = False
-        hand_asset_options.disable_gravity = True
-        hand_asset_options.thickness = 0.0001
-        hand_asset_options.armature = 0.001
+        asset_options = gymapi.AssetOptions()
+        asset_options.flip_visual_attachments = False
+        asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
+        asset_options.fix_base_link = True
+        asset_options.collapse_fixed_joints = False
+        asset_options.disable_gravity = True
+        asset_options.thickness = 0.0001
+        asset_options.armature = 0.001
         # asset_options.angular_damping = 0.1
         # asset_options.linear_damping = 0.1
         
 
         # if self.physics_engine == gymapi.SIM_PHYSX:
         #     asset_options.use_physx_armature = True
-        hand_asset_options.use_physx_armature = True
+        asset_options.use_physx_armature = True
         
         print("hand")
-        botyard_hand_asset = self.gym.load_asset(self.sim, asset_root, botyard_hand_asset_file, hand_asset_options)
+        botyard_hand_asset = self.gym.load_asset(self.sim, asset_root, botyard_hand_asset_file, asset_options)
         print("hand loaded")
         self.num_botyard_hand_bodies = self.gym.get_asset_rigid_body_count(botyard_hand_asset)
         self.num_botyard_hand_shapes = self.gym.get_asset_rigid_shape_count(botyard_hand_asset)
@@ -456,6 +453,13 @@ class BotyardHandPick(BaseTask):
             self.botyard_hand_dof_default_pos.append(0.0)
             self.botyard_hand_dof_default_vel.append(0.0)
 
+        for i in range(7, self.num_botyard_hand_dofs):
+            botyard_hand_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
+            botyard_hand_dof_props['stiffness'][i] = 100
+            botyard_hand_dof_props['damping'][i] = 20
+            botyard_hand_dof_props['effort'][i] = 0.5
+            # botyard_hand_dof_props['armature'][i] = 0.002
+
         x_arm_dof_effort = to_torch([87, 87, 87, 87, 12, 12, 12], dtype=torch.float, device=self.device)
 
         for i in range(0, 7):
@@ -465,16 +469,8 @@ class BotyardHandPick(BaseTask):
             botyard_hand_dof_props['effort'][i] = x_arm_dof_effort[i]
             # botyard_hand_dof_props['armature'][i] = 0.01
 
-        for i in range(7, self.num_botyard_hand_dofs):
-            botyard_hand_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
-            botyard_hand_dof_props['stiffness'][i] = 100
-            botyard_hand_dof_props['damping'][i] = 20
-            botyard_hand_dof_props['effort'][i] = 0.5
-            # botyard_hand_dof_props['armature'][i] = 0.002
-
         # botyard_hand_dof_props["stiffness"].fill(625.0)
         # botyard_hand_dof_props["damping"].fill(50.0)
-        
         self.hand_rigid_body_props = None
         self.hand_shape_name_id_map = None
 
@@ -712,16 +708,10 @@ class BotyardHandPick(BaseTask):
         print(self.body_indices.keys(), self.body_indices["object"].shape)
         print(self.body_vertices.keys())
 
-        ############ ik #####################
-        _jacobian = self.gym.acquire_jacobian_tensor(self.sim, "hand")
-        self.jacobian = gymtorch.wrap_tensor(_jacobian)
-        self.j_eef = self.jacobian[:, self.ee_handle - 1, :, :7]
-        self.hand_ik_damping = 0.05
-
     def compute_reward(self, actions, visdebug = False):
         self.rew_buf[:], self.reset_buf[:], self.reset_goal_buf[:], self.progress_buf[:], self.successes[:], self.consecutive_successes[:] = compute_hand_reward(
             self.rew_buf, self.reset_buf, self.reset_goal_buf, self.progress_buf, self.successes, self.consecutive_successes,
-            self.max_episode_length, self.object_pos, self.object_rot, self.goal_pos, self.goal_rot, self.botyard_right_hand_pos, self.ee_pos,
+            self.max_episode_length, self.object_pos, self.object_rot, self.goal_pos, self.goal_rot, self.botyard_right_hand_pos, self.botyard_right_hand_pos,
             self.dist_reward_scale, self.rot_reward_scale, self.rot_eps, self.actions, self.action_penalty_scale,
             self.success_tolerance, self.reach_goal_bonus, self.fall_dist, self.fall_penalty,
             self.max_consecutive_successes, self.av_factor, (self.object_type == "pen"), self.finger_mid_dis, self.postive_distance_mod, self.fingertip_distance,
@@ -980,79 +970,9 @@ class BotyardHandPick(BaseTask):
         self.reset_buf[env_ids] = 0
         self.successes[env_ids] = 0
 
-    def control_ik(self,action):
-
-        pass
-
-    def cal_ik(self, dpose):
-        # j_eef 就是雅可比矩阵 J
-        # j_eef_T 是 J 的转置 Jᵀ
-        j_eef_T = torch.transpose(self.j_eef, 1, 2)
-
-        # lmbda 就是阻尼项 λ² * I
-        lmbda = torch.eye(6, device=self.device) * (self.hand_ik_damping ** 2)
-
-        # 这行代码完美地实现了上面的DLS公式
-        u = (j_eef_T @ torch.inverse(self.j_eef @ j_eef_T + lmbda) @ dpose).view(self.num_envs, 7)
-        return u
-
-    def input_action_to_action(self):
-        ## action space
-        ## 6 dof ee ; FAJ3 JAJ1 FFJ432 LFJ432 MFJ432 RFJ432 THJ4321; 24
-
-        ################### ik ################################
-        
-        goal_pose_err = torch.zeros_like(self.actions[:,:6])
-        goal_pose_err[3:6] = 0
-        max_linear_velocity = 0.2   # 米/秒
-        max_angular_velocity = np.pi / 4 # 弧度/秒
-        goal_pose_err[:,0:3] = self.actions[:,0:3] * max_linear_velocity  * self.dt
-        goal_pose_err[:,3:6] = self.actions[:,3:6] * max_angular_velocity * self.dt
-        targets = self.prev_targets[:, self.actuated_dof_indices]
-        targets[:,0:7] = targets[:,0:7] + self.control_ik(goal_pose_err.unsqueeze(-1))
-
-        def map_finger_action_to_action():
-            tarfin = torch.zeros_like(targets)
-            ## FAJ31
-            tarfin[:,7:9]  = self.actions[:,6:8]
-            ## FFJ 432  FFJ1
-            tarfin[:,9:12] = self.actions[:,8:11]
-            tarfin[:,12]   = self.actions[:,10]
-            ## LFJ 432  LFJ1
-            tarfin[:,13:16] = self.actions[:,11:14]
-            tarfin[:,16]    = self.actions[:,13]
-            ## MFJ 432  MFJ1
-            tarfin[:,17:20] = self.actions[:,14:17]
-            tarfin[:,20]    = self.actions[:,16]
-            ## RFJ 432  RFJ1
-            tarfin[:,21:24] = self.actions[:,17:20]
-            tarfin[:,24]    = self.actions[:,19]
-            ## THJ 4321
-            tarfin[:,25:29] = self.actions[:,20:24]
-            return tarfin
-
-        if self.use_relative_control:
-            targets[:, :] = targets[:, :] + self.botyard_hand_dof_speed_scale * self.dt * map_finger_action_to_action()
-            self.cur_targets[:, self.actuated_dof_indices] = tensor_clamp(targets,
-                                                                          self.botyard_hand_dof_lower_limits[self.actuated_dof_indices], self.botyard_hand_dof_upper_limits[self.actuated_dof_indices])
-        else:
-            tarfin_norm = map_finger_action_to_action()
-            targets[:, 7:] = scale(tarfin_norm[:, 7:], self.botyard_hand_dof_lower_limits[7:], self.botyard_hand_dof_upper_limits[7:])
-            self.cur_targets[:, self.actuated_dof_indices] = tensor_clamp(targets,
-                                                                          self.botyard_hand_dof_lower_limits[self.actuated_dof_indices], self.botyard_hand_dof_upper_limits[self.actuated_dof_indices])
-        # print("target",self.prev_targets[0, :7])
-        # print("actual",self.botyard_hand_dof_pos[0,:7])
-        # print("err", self.cur_targets[0, :7] - self.botyard_hand_dof_pos[0,:7])
-        # print("final",self.cur_targets[0,:])
-        # print(self.cur_targets[0,:])
-        self.prev_targets[:, :] = self.cur_targets[:, :]
-        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
-
     def pre_physics_step(self, actions):
         env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
-        self.gym.refresh_jacobian_tensors(self.sim)
-        self.compute_observations()
 
         # if only goals need reset, then call set API
         if len(goal_env_ids) > 0 and len(env_ids) == 0:
@@ -1065,14 +985,37 @@ class BotyardHandPick(BaseTask):
             self.reset(env_ids, goal_env_ids)
 
         self.actions = actions.clone().to(self.device)
-        # print(self.actions[0,:])
-        self.input_action_to_action()
-        
+        if self.use_relative_control:
+            targets = self.prev_targets[:, self.actuated_dof_indices] + self.botyard_hand_dof_speed_scale * self.dt * self.actions
+            self.cur_targets[:, self.actuated_dof_indices] = tensor_clamp(targets,
+                                                                          self.botyard_hand_dof_lower_limits[self.actuated_dof_indices], self.botyard_hand_dof_upper_limits[self.actuated_dof_indices])
+        else:
+            # panda-arm control
+            arm_dof_num = 7
+            targets = self.prev_targets[:, :arm_dof_num] + self.botyard_hand_dof_speed_scale * self.dt * self.actions[:, :arm_dof_num]
+            self.cur_targets[:, :arm_dof_num] = tensor_clamp(targets,
+                                    self.botyard_hand_dof_lower_limits[:arm_dof_num], self.botyard_hand_dof_upper_limits[:arm_dof_num])
+
+            self.cur_targets[:, arm_dof_num:] = scale(self.actions[:, arm_dof_num:],
+                                                                   self.botyard_hand_dof_lower_limits[arm_dof_num:], self.botyard_hand_dof_upper_limits[arm_dof_num:])
+            self.cur_targets[:, arm_dof_num:] = tensor_clamp(self.cur_targets[:, arm_dof_num:],
+                                                                          self.botyard_hand_dof_lower_limits[arm_dof_num:], self.botyard_hand_dof_upper_limits[arm_dof_num:])
+            
+        self.cur_targets[:, self.dof_J1_index] = self.cur_targets[:, self.dof_J2_index]
+        self.cur_targets[:, :]
+        # print("target",self.prev_targets[0, :7])
+        # print("actual",self.botyard_hand_dof_pos[0,:7])
+        # print("err", self.cur_targets[0, :7] - self.botyard_hand_dof_pos[0,:7])
+        # print("final",self.cur_targets[0,:])
+        # print(self.cur_targets[0,:])
+        self.prev_targets[:, :] = self.cur_targets[:, :]
+        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
 
     def post_physics_step(self):
         self.progress_buf += 1
         self.randomize_buf += 1
 
+        self.compute_observations()
         self.compute_reward(self.actions)
 
         if self.free_cuda_cache_count >= self.free_cuda_cache_threshold:
@@ -1112,7 +1055,7 @@ class BotyardHandPick(BaseTask):
 @torch.jit.script
 def compute_hand_reward(
     rew_buf, reset_buf, reset_goal_buf, progress_buf, successes, consecutive_successes,
-    max_episode_length: float, object_pos, object_rot, target_pos, target_rot, left_hand_pos, ee_pos,
+    max_episode_length: float, object_pos, object_rot, target_pos, target_rot, left_hand_pos, right_hand_pos,
     dist_reward_scale: float, rot_reward_scale: float, rot_eps: float,
     actions, action_penalty_scale: float,
     success_tolerance: float, reach_goal_bonus: float, fall_dist: float,
@@ -1139,7 +1082,7 @@ def compute_hand_reward(
     reward2 = torch.exp(-10 * finger_mid_dis.t())
     reward3 = torch.exp(-10 * postive_distance_mod.t())
     # reward4 = torch.exp(-10 * fingertip_distance.t())
-    reward5 = ee_obj_rot_cos * 0.2
+    reward5 = ee_obj_rot_cos * 0.5
     reward =  reward1 + 0.4 * reward2 + 0.5 * reward3 + reward5 #+ 0.02 * reward4
     # print("reward before:", reward)
 
@@ -1155,8 +1098,8 @@ def compute_hand_reward(
 
     # Check env termination conditions, including maximum success number
     resets = torch.where(object_pos[:, 2] <= 0.2, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where(ee_pos[:, 2] <= 0.35, torch.ones_like(resets), resets)
-    resets = torch.where(ee_pos[:, 0] <= -0.1, torch.ones_like(resets), resets)
+    resets = torch.where(right_hand_pos[:, 2] <= 0.3, torch.ones_like(resets), resets)
+    resets = torch.where(right_hand_pos[:, 0] <= -0.2, torch.ones_like(resets), resets)
 
     if max_consecutive_successes > 0:
         # Reset progress buffer on goal envs if max_consecutive_successes > 0
@@ -1283,23 +1226,19 @@ if __name__ ==  "__main__":
     terminated = False
     cnt = 0
     while not terminated:
-        act = torch.tensor(env.action_space.sample())
-        # act = torch.zeros(29)
+        # act = torch.tensor(env.action_space.sample()).repeat((env.num_envs, 1)) * 0.1
+        act = torch.zeros(29)
         # a = [10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23, 24, 27, 28]
         # j4 = [9, 13, 17, 21, 25]
         # act[a] = -1.0
         if cnt > 50:
             #act[j4] = -1
-            act[0] = -0.5
-            act[1] = -0.5
-            act[2] = -0.1
-            act[3:6] = 0
+            act[5] = -0.5
+            act[2] = -0.5
         else:
-            # act[j4]= 1
-            act[0] = 0.5
-            act[1] = 0.5
-            act[2] = 0.1
-            act[3:6] = 0
+            # act[j4] = 1
+            act[5] = 0.5
+            act[2] = 0.5
         act = act.repeat((env.num_envs, 1))
         # print("action: " + str(act[1,:]))
         obs, reward, done, info = env.step(act)
