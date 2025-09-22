@@ -11,61 +11,90 @@ import random
 
 from bidexhands.utils.config import set_np_formatting, set_seed, get_args, parse_sim_params, load_cfg
 from bidexhands.utils.parse_task import parse_task
-from bidexhands.utils.process_sarl import process_sarl
-from bidexhands.utils.process_marl import process_MultiAgentRL, get_AgentIndex
-from bidexhands.utils.process_mtrl import *
-from bidexhands.utils.process_metarl import *
-from bidexhands.utils.process_offrl import *
+from bidexhands.utils.process_marl import get_AgentIndex
+from bidexhands.algorithms.rl.ppo import PPO
+from bidexhands.tasks.hand_base.vec_task import VecTaskPython, VecTaskPythonArm
+from bidexhands.tasks.botyard_hand_pick import BotyardHandPick
 
-MARL_ALGOS = ["mappo", "happo", "hatrpo","maddpg","ippo"]
-SARL_ALGOS = ["ppo","ddpg","sac","td3","trpo"]
-MTRL_ALGOS = ["mtppo", "random"]
-META_ALGOS = ["mamlppo"]
-OFFRL_ALGOS = ["td3_bc", "bcq", "iql", "ppo_collect"]
+def parse_task(args, cfg, cfg_train, sim_params, agent_index):
+
+    # create native task and pass custom config
+    device_id = args.device_id
+    rl_device = args.rl_device
+
+    cfg["seed"] = cfg_train.get("seed", -1)
+    cfg_task = cfg["env"]
+    cfg_task["seed"] = cfg["seed"]
+
+    print("Python")
+
+    try:
+        task = BotyardHandPick(
+            cfg=cfg,
+            sim_params=sim_params,
+            physics_engine=args.physics_engine,
+            device_type=args.device,
+            device_id=device_id,
+            headless=args.headless,
+            is_multi_agent=False)
+    except NameError as e:
+        print(e)
+    
+    env = VecTaskPython(task, rl_device)
+
+    return task, env
+
+
+def process_sarl(args, env, cfg_train, logdir):
+    learn_cfg = cfg_train["learn"]
+    is_testing = learn_cfg["test"]
+    # is_testing = True
+    # Override resume and testing flags if they are passed as parameters.
+    if args.model_dir != "":
+        # is_testing = True
+        chkpt_path = args.model_dir
+
+    if args.max_iterations != -1:
+        cfg_train["learn"]["max_iterations"] = args.max_iterations
+
+    project_id = "Dof9_ik_0"
+    logdir = "logs/BotyardHandPick/ppo/" + project_id
+
+    """Set up the algo system for training or inferencing."""
+    model = PPO(vec_env=env,
+              cfg_train=cfg_train,
+              device=env.rl_device,
+              sampler=learn_cfg.get("sampler", 'sequential'),
+              log_dir=logdir,
+              is_testing=is_testing,
+              print_log=learn_cfg["print_log"],
+              apply_reset=False,
+              asymmetric=(env.num_states > 0)
+              )
+
+    if is_testing and args.model_dir != "":
+        print("Loading model from {}".format(chkpt_path))
+        model.test(chkpt_path)
+    elif args.model_dir != "":
+        print("Loading model from {}".format(chkpt_path))
+        model.load(chkpt_path)
+
+    return model
+
 
 def train():
     print("Algorithm: ", args.algo)
     agent_index = get_AgentIndex(cfg)
-    assert args.algo in MARL_ALGOS + SARL_ALGOS + MTRL_ALGOS + META_ALGOS + OFFRL_ALGOS, \
-        "Unrecognized algorithm!\nAlgorithm should be one of: [happo, hatrpo, mappo,ippo, \
-            maddpg,sac,td3,trpo,ppo,ddpg, mtppo, random, mamlppo, td3_bc, bcq, iql, ppo_collect]"
-    algo = args.algo
-    if args.algo in MARL_ALGOS: 
-        # maddpg exists a bug now 
-        args.task_type = "MultiAgent"
-        algo = "MultiAgentRL"
-        task, env = parse_task(args, cfg, cfg_train, sim_params, agent_index)
-        runner = eval('process_{}'.format(algo))(args, env, cfg_train, args.model_dir)
-        if args.model_dir != "":
-            runner.eval(1000)
-        else:
-            runner.run()
-        return
-    elif args.algo in SARL_ALGOS:
-        algo = "sarl"
-    elif args.algo in MTRL_ALGOS:
-        args.task_type = "MultiTask"
-    elif args.algo in META_ALGOS:
-        args.task_type = "Meta"
-    elif args.algo in OFFRL_ALGOS:
-        pass 
-
     task, env = parse_task(args, cfg, cfg_train, sim_params, agent_index)
-    runner = eval('process_{}'.format(algo))(args, env, cfg_train, logdir)
+    runner = process_sarl(args, env, cfg_train, logdir)
     iterations = cfg_train["learn"]["max_iterations"]
     if args.max_iterations > 0:
         iterations = args.max_iterations
-
-    runner.train(train_epoch=iterations) if args.algo in META_ALGOS else \
-        runner.run(num_learning_iterations=iterations, log_interval=cfg_train["learn"]["save_interval"])
-    
-RESUME = False
+    runner.run(num_learning_iterations=iterations, log_interval=cfg_train["learn"]["save_interval"])
 
 if __name__ == '__main__':
     set_np_formatting()
     args = get_args(task_name="BotyardHandPick", algo="ppo")
-    if RESUME == True:
-        args.model_dir = "logs/BotyardHandPick/ppo/ppo_seed42/model_5000.pt"
     cfg, cfg_train, logdir = load_cfg(args)
     sim_params = parse_sim_params(args, cfg, cfg_train)
     set_seed(cfg_train.get("seed", -1), cfg_train.get("torch_deterministic", False))

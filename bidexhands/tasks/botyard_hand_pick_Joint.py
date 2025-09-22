@@ -1144,14 +1144,14 @@ def compute_table_distance_jit(poses_a, vertices_a, table_height: float):
 
     Args:
         poses_a (Tensor): 物体的位姿, 形状 (num_envs, 13)
-        vertices_a (Tensor): 物体表面的采样点 (局部坐标), 形状 (num_samples, 3)
+        vertices_a (Tensor): 物体表面的采样点 (局部坐标), 形状 (num_envsnum_samples, 3)
         table_height (float): 桌面的Z坐标高度
 
     Returns:
         Tensor: 每个环境中物体到桌面的最小距离, 形状 (num_envs,)
     """
     num_envs = poses_a.shape[0]
-    num_samples = vertices_a.shape[0]
+    num_samples = vertices_a.shape[1]
 
     pos_a, rot_a = poses_a[:, 0:3], poses_a[:, 3:7]
 
@@ -1178,14 +1178,14 @@ def compute_surface_distance_jit(poses_a, poses_b, vertices_a, vertices_b):
     Args:
         poses_a (Tensor): A批物体的位姿, 形状 (num_envs, 13)
         poses_b (Tensor): B批物体的位姿, 形状 (num_envs, 13)
-        vertices_a (Tensor): A物体表面的采样点 (局部坐标), 形状 (num_samples, 3)
-        vertices_b (Tensor): B物体表面的采样点 (局部坐标), 形状 (num_samples, 3)
+        vertices_a (Tensor): A物体表面的采样点 (局部坐标), 形状 (num_envs, num_samples, 3)
+        vertices_b (Tensor): B物体表面的采样点 (局部坐标), 形状 (num_envs, num_samples, 3)
 
     Returns:
         Tensor: 每个环境中A和B之间的最小距离, 形状 (num_envs,)
     """
     num_envs = poses_a.shape[0]
-    num_samples = vertices_a.shape[0]
+    num_samples = vertices_a.shape[1]
 
     # 1. 获取实时位姿
     pos_a, rot_a = poses_a[:, 0:3], poses_a[:, 3:7]
@@ -1193,12 +1193,10 @@ def compute_surface_distance_jit(poses_a, poses_b, vertices_a, vertices_b):
 
     # 2. 变换点云到世界坐标系 (向量化操作)
     # 扩展旋转和平移张量以进行广播
-    rot_a_expanded = rot_a.unsqueeze(1).expand(-1, num_samples, -1)
-    rot_b_expanded = rot_b.unsqueeze(1).expand(-1, num_samples, -1)
-    pos_a_expanded = pos_a.unsqueeze(1)
-    pos_b_expanded = pos_b.unsqueeze(1)
-
-    
+    rot_a_expanded = rot_a.unsqueeze(1).expand(-1, num_samples, -1) # (num_envs, num_samples, 4)
+    rot_b_expanded = rot_b.unsqueeze(1).expand(-1, num_samples, -1) # (num_envs, num_samples, 4)
+    pos_a_expanded = pos_a.unsqueeze(1) # (num_envs, 1, 3)
+    pos_b_expanded = pos_b.unsqueeze(1) # (num_envs, 1, 3)
 
     # 计算世界坐标系中的点云
     pcd_a_world = quat_apply(rot_a_expanded, vertices_a) + pos_a_expanded

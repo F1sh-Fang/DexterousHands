@@ -158,8 +158,8 @@ class BotyardHandPick(BaseTask):
         self.botyard_hand_default_dof_pos[:7] = torch.tensor([0, -1.3, 0, -2.4, 0, 2.66, 0], dtype=torch.float, device=self.device)
         self.ee_default_target_pose = torch.zeros(7, dtype=torch.float, device=self.device)
         self.ee_default_target_pose = torch.tensor([0.365, 0, 0.809, 0, 0, 0, 1], dtype=torch.float, device=self.device)
-        self.ee_pos_lower_limits = torch.tensor([0.1, -0.7, 0.62], dtype=torch.float, device=self.device)
-        self.ee_pos_upper_limits = torch.tensor([0.85, 0.7, 1.2], dtype=torch.float, device=self.device)
+        self.ee_pos_lower_limits = torch.tensor([0.1, -0.6, 0.62], dtype=torch.float, device=self.device)
+        self.ee_pos_upper_limits = torch.tensor([0.85, 0.6, 1.2], dtype=torch.float, device=self.device)
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.botyard_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_botyard_hand_dofs]
@@ -585,8 +585,9 @@ class BotyardHandPick(BaseTask):
             try:
                 mesh = trimesh.load(path)
                 samples_np, _ = trimesh.sample.sample_surface(mesh, self.num_surface_samples)
-                vertice = to_torch(samples_np, device=self.device, dtype=torch.float) # (num_samples, 3)
-                self.body_vertices[name] = vertice.unsqueeze(0).expand(num_envs, -1, -1) # (num_envs, num_samples, 3)
+                vertice = to_torch(samples_np, device=self.device, dtype=torch.float)
+                self.body_vertices[name] = vertice.unsqueeze(0).expand(num_envs, -1, -1)
+                
                 # print(f"  - 成功为 '{name}' ({path}) 采样 {samples_torch.shape[0]} 个点。")
             except Exception as e:
                 print(f"  - 警告: 加载或采样 ({path}) 失败: {e}")
@@ -718,11 +719,10 @@ class BotyardHandPick(BaseTask):
         print(self.body_vertices.keys())
 
         ############ ik #####################
-        self.num_ik_arm_dof = 9
         _jacobian = self.gym.acquire_jacobian_tensor(self.sim, "hand")
         self.jacobian = gymtorch.wrap_tensor(_jacobian)
-        self.j_eef = self.jacobian[:, self.ee_handle - 1, :, :self.num_ik_arm_dof]
-        self.hand_ik_damping = 0.1
+        self.j_eef = self.jacobian[:, self.ee_handle - 1, :, :7]
+        self.hand_ik_damping = 0.5
 
     def compute_reward(self, actions, visdebug = False):
         self.rew_buf[:], self.reset_buf[:], self.reset_goal_buf[:], self.progress_buf[:], self.successes[:], self.consecutive_successes[:] = compute_hand_reward(
@@ -1043,7 +1043,7 @@ class BotyardHandPick(BaseTask):
         # lmbda 就是阻尼项 λ² * I
         lmbda = torch.eye(6, device=self.device) * (self.hand_ik_damping ** 2)
 
-        u = (j_eef_T @ torch.inverse(self.j_eef @ j_eef_T + lmbda) @ dpose).view(self.num_envs, self.num_ik_arm_dof)
+        u = (j_eef_T @ torch.inverse(self.j_eef @ j_eef_T + lmbda) @ dpose).view(self.num_envs, 7)
         return u
 
     def input_action_to_action(self):
@@ -1056,13 +1056,12 @@ class BotyardHandPick(BaseTask):
         self.gym.refresh_jacobian_tensors(self.sim)
 
         targets = self.prev_targets[:, self.actuated_dof_indices].clone()
-        targets[:,0:self.num_ik_arm_dof] = self.botyard_hand_dof_pos[:,0:self.num_ik_arm_dof] + self.control_ik(self.actions[:,:6])
+        targets[:,0:7] = self.botyard_hand_dof_pos[:,0:7] + self.control_ik(self.actions[:,:6])
 
         def map_finger_action_to_action():
             tarfin = torch.zeros_like(targets)
             ## FAJ31
-            if self.num_ik_arm_dof == 7:
-                tarfin[:,7:9]  = self.actions[:,6:8]
+            tarfin[:,7:9]  = self.actions[:,6:8]
             ## FFJ 432  FFJ1
             tarfin[:,9:12] = self.actions[:,8:11]
             tarfin[:,12]   = self.actions[:,10]
@@ -1085,7 +1084,7 @@ class BotyardHandPick(BaseTask):
                                                                           self.botyard_hand_dof_lower_limits[self.actuated_dof_indices], self.botyard_hand_dof_upper_limits[self.actuated_dof_indices])
         else:
             tarfin_norm = map_finger_action_to_action()
-            targets[:, self.num_ik_arm_dof:] = scale(tarfin_norm[:, self.num_ik_arm_dof:], self.botyard_hand_dof_lower_limits[self.num_ik_arm_dof:], self.botyard_hand_dof_upper_limits[self.num_ik_arm_dof:])
+            targets[:, 7:] = scale(tarfin_norm[:, 7:], self.botyard_hand_dof_lower_limits[7:], self.botyard_hand_dof_upper_limits[7:])
             self.cur_targets[:, self.actuated_dof_indices] = tensor_clamp(targets,
                                                                           self.botyard_hand_dof_lower_limits[self.actuated_dof_indices], self.botyard_hand_dof_upper_limits[self.actuated_dof_indices])
         # print("target",self.prev_targets[0, :7])
@@ -1276,14 +1275,14 @@ def compute_table_distance_jit(poses_a, vertices_a, table_height: float):
 
     Args:
         poses_a (Tensor): 物体的位姿, 形状 (num_envs, 13)
-        vertices_a (Tensor): 物体表面的采样点 (局部坐标), 形状 (num_envsnum_samples, 3)
+        vertices_a (Tensor): 物体表面的采样点 (局部坐标), 形状 (num_samples, 3)
         table_height (float): 桌面的Z坐标高度
 
     Returns:
         Tensor: 每个环境中物体到桌面的最小距离, 形状 (num_envs,)
     """
     num_envs = poses_a.shape[0]
-    num_samples = vertices_a.shape[1]
+    num_samples = vertices_a.shape[0]
 
     pos_a, rot_a = poses_a[:, 0:3], poses_a[:, 3:7]
 
@@ -1310,14 +1309,14 @@ def compute_surface_distance_jit(poses_a, poses_b, vertices_a, vertices_b):
     Args:
         poses_a (Tensor): A批物体的位姿, 形状 (num_envs, 13)
         poses_b (Tensor): B批物体的位姿, 形状 (num_envs, 13)
-        vertices_a (Tensor): A物体表面的采样点 (局部坐标), 形状 (num_envs, num_samples, 3)
-        vertices_b (Tensor): B物体表面的采样点 (局部坐标), 形状 (num_envs, num_samples, 3)
+        vertices_a (Tensor): A物体表面的采样点 (局部坐标), 形状 (num_samples, 3)
+        vertices_b (Tensor): B物体表面的采样点 (局部坐标), 形状 (num_samples, 3)
 
     Returns:
         Tensor: 每个环境中A和B之间的最小距离, 形状 (num_envs,)
     """
     num_envs = poses_a.shape[0]
-    num_samples = vertices_a.shape[1]
+    num_samples = vertices_a.shape[0]
 
     # 1. 获取实时位姿
     pos_a, rot_a = poses_a[:, 0:3], poses_a[:, 3:7]
@@ -1325,10 +1324,12 @@ def compute_surface_distance_jit(poses_a, poses_b, vertices_a, vertices_b):
 
     # 2. 变换点云到世界坐标系 (向量化操作)
     # 扩展旋转和平移张量以进行广播
-    rot_a_expanded = rot_a.unsqueeze(1).expand(-1, num_samples, -1) # (num_envs, num_samples, 4)
-    rot_b_expanded = rot_b.unsqueeze(1).expand(-1, num_samples, -1) # (num_envs, num_samples, 4)
-    pos_a_expanded = pos_a.unsqueeze(1) # (num_envs, 1, 3)
-    pos_b_expanded = pos_b.unsqueeze(1) # (num_envs, 1, 3)
+    rot_a_expanded = rot_a.unsqueeze(1).expand(-1, num_samples, -1)
+    rot_b_expanded = rot_b.unsqueeze(1).expand(-1, num_samples, -1)
+    pos_a_expanded = pos_a.unsqueeze(1)
+    pos_b_expanded = pos_b.unsqueeze(1)
+
+    
 
     # 计算世界坐标系中的点云
     pcd_a_world = quat_apply(rot_a_expanded, vertices_a) + pos_a_expanded
@@ -1361,17 +1362,17 @@ if __name__ ==  "__main__":
         # a = [10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23, 24, 27, 28]
         # j4 = [9, 13, 17, 21, 25]
         # act[a] = -1.0
-        if cnt > 90:
+        if cnt > 50:
             #act[j4] = -1
-            # act[0] = -0.9
+            act[0] = -0.9
             act[1] = -0.9
-            # act[2] = -0.9
+            act[2] = -0.9
             act[3:6] = 0
         else:
             # act[j4]= 1
-            # act[0] = 0.9
+            act[0] = 0.9
             act[1] = 0.9
-            # act[2] = 0.9
+            act[2] = 0.9
             act[3:6] = 0
         act = act.repeat((env.num_envs, 1))
         # print(env.task.ee_target_pose[0,:])

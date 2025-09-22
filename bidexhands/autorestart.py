@@ -16,9 +16,8 @@ def find_latest_checkpoint(path):
         return None
 
 if __name__ == '__main__':
-    with open('cfg/ppo/botyard_config.yaml', 'r', encoding='utf-8') as f:
-        cfg = yaml.load(f.read(), Loader=yaml.FullLoader)
-    log_path = "logs/BotyardHandPick/ppo/ppo_seed" + str(cfg['seed'])
+    project_id = "Dof9_ik_0"
+    log_path = "logs/BotyardHandPick/ppo/" + project_id
     first = True
     while True:
 

@@ -98,9 +98,36 @@ def main():
     # --- 3. 创建环境和Actor ---
     env = gym.create_env(sim, gymapi.Vec3(-2,-2,0), gymapi.Vec3(2,2,2), 1)
     pose = gymapi.Transform()
-    pose.p = gymapi.Vec3(0.0, 0.0, 0.5)
+    pose.p = gymapi.Vec3(-0.05, 0.0, 0)
     actor_handle = gym.create_actor(env, asset, pose, "hand", 0, 0, 0)
     gym.set_actor_dof_properties(env, actor_handle, dof_props)
+
+    table_dims = gymapi.Vec3(0.65, 1.5, 0.6)
+    table_asset_options = gymapi.AssetOptions()
+    table_asset_options.fix_base_link = True
+    table_asset_options.flip_visual_attachments = True
+    table_asset_options.collapse_fixed_joints = True
+    table_asset_options.disable_gravity = True
+    table_asset_options.thickness = 0.001
+    table_asset = gym.create_box(sim, table_dims.x, table_dims.y, table_dims.z, table_asset_options)
+    table_pose = gymapi.Transform()
+    table_pose.p = gymapi.Vec3(0.65, 0.0, 0.5 * table_dims.z)
+    table_pose.r = gymapi.Quat().from_euler_zyx(-0., 0, 0)
+    table_handle = gym.create_actor(env, table_asset, table_pose, "table", 0, 0, 0)
+
+    box_size = 0.05
+    asset_options = gymapi.AssetOptions()
+    asset_options.density = 1000.0
+    asset_options.thickness = 0.001
+    asset_options.disable_gravity = False
+    asset_options.fix_base_link = False
+    box_asset = gym.create_box(sim, box_size, box_size, box_size, asset_options)
+    box_pose = gymapi.Transform()
+    box_pose.p.x = table_pose.p.x
+    box_pose.p.y = table_pose.p.y
+    box_pose.p.z = table_dims.z + 0.7 * box_size
+    box_pose.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), np.random.uniform(-math.pi, math.pi))
+    box_handle = gym.create_actor(env, box_asset, box_pose, "box", 0, 0, 0)
 
     # --- 4. 准备张量 ---
     gym.refresh_dof_state_tensor(sim)
@@ -185,15 +212,19 @@ def main():
     angle_step = 0.1
     ############ ik #####################
     gym.prepare_sim(sim)
+    gym.refresh_jacobian_tensors(sim)
     _jacobian = gym.acquire_jacobian_tensor(sim, "hand")
     jacobian = gymtorch.wrap_tensor(_jacobian)
     ee_handle = gym.find_asset_rigid_body_index(asset, "central")
-    j_eef = jacobian[:, ee_handle - 1, :, :7]
+    print("ee_handle",ee_handle)
+    j_eef = jacobian[:, ee_handle - 1, :, :9]
+    print("ee_jacobian shape: value",j_eef.shape, j_eef)
 
     print("\n--- INTERACTIVE PD CONTROL ---")
     print("  UP/DOWN: Select | LEFT/RIGHT: Change Target | R: Reset | P: Print | V: View | Q/ESC: Quit\n")
     last = False
-    num_hand_dofs = num_dofs - 7
+    num_arm_dofs = 9
+    num_hand_dofs = num_dofs - num_arm_dofs
     rigid_body_tensor = gym.acquire_rigid_body_state_tensor(sim)
     gym.refresh_rigid_body_state_tensor(sim)
     rigid_body_tensor = gymtorch.wrap_tensor(rigid_body_tensor)
@@ -201,7 +232,7 @@ def main():
     ee_pose   = rigid_body_states[ee_handle, 0:7]
     ee_pos    = rigid_body_states[ee_handle, 0:3]
     ee_quat   = rigid_body_states[ee_handle, 3:7]
-    ee_home_pose = torch.tensor([0.415, 0, 1.31,0,0,0])
+    ee_home_pose = torch.tensor([0.415, 0, 0.81,0,0,0])
     ee_target_pose = ee_home_pose.clone()
     while not gym.query_viewer_has_closed(viewer):
         gym.refresh_jacobian_tensors(sim)
@@ -223,11 +254,11 @@ def main():
                 else:
                     last = False
             elif evt.action == "S":
-                dof_targets[current_dof_idx + 7] -= angle_step
+                dof_targets[current_dof_idx + num_arm_dofs] -= angle_step
             elif evt.action == "W":
-                dof_targets[current_dof_idx + 7] += angle_step
+                dof_targets[current_dof_idx + num_arm_dofs] += angle_step
             elif evt.action == "R":
-                dof_targets[current_dof_idx + 7] = initial_dof_pos[current_dof_idx + 7]
+                dof_targets[current_dof_idx + num_arm_dofs] = initial_dof_pos[current_dof_idx + num_arm_dofs]
             elif evt.action == "P":
                 gym.refresh_dof_state_tensor(sim)
                 current_pos = dof_state[:, 0]
@@ -272,7 +303,7 @@ def main():
         ee_target_quat = torch.tensor(R.from_euler("xyz",ee_target_pose[3:6],degrees=False).as_quat())
         ee_dpose[0:3] -= ee_pos
         ee_dpose[3:6] = orientation_error(ee_target_quat.unsqueeze(0),ee_quat.unsqueeze(0))
-        dof_targets[:7] = dof_state[:7, 0] + control_ik(ee_dpose,j_eef)
+        dof_targets[:num_arm_dofs] = dof_state[:num_arm_dofs, 0] + control_ik(ee_dpose,j_eef)
         dof_targets = tensor_clamp(dof_targets, dof_lower_limits, dof_upper_limits)
         gym.set_dof_position_target_tensor(sim, gymtorch.unwrap_tensor(dof_targets))
         
@@ -282,9 +313,9 @@ def main():
         gym.refresh_dof_state_tensor(sim)
         current_pos = dof_state[:, 0]
         
-        target_angle = dof_targets[current_dof_idx + 7]
-        current_angle = current_pos[current_dof_idx + 7]
-        print(f"\rControlling: {dof_names[current_dof_idx + 7]} | Target: {target_angle:.3f} | Current: {current_angle:.3f} | ee: [{', '.join([f'{x:.3f}' for x in ee_pose])}] | target: [{', '.join([f'{x:.3f}' for x in ee_target_pose])}]", end="")
+        target_angle = dof_targets[current_dof_idx + num_arm_dofs]
+        current_angle = current_pos[current_dof_idx + num_arm_dofs]
+        print(f"\rControlling: {dof_names[current_dof_idx  + num_arm_dofs]} | Target: {target_angle:.3f} | Current: {current_angle:.3f} | ee: [{', '.join([f'{x:.3f}' for x in ee_pose])}] | target: [{', '.join([f'{x:.3f}' for x in ee_target_pose])}]", end="")
 
         gym.step_graphics(sim)
         gym.draw_viewer(viewer, sim, True)
@@ -296,11 +327,11 @@ def orientation_error(desired, current):
     q_r = quat_mul(desired, cc)
     return q_r[:, 0:3] * torch.sign(q_r[:, 3]).unsqueeze(-1)
 
-def control_ik(dpose, j_eef, num_envs=1, damping=0.05):
+def control_ik(dpose, j_eef, num_envs=1, damping=0.1, num_arm_dofs=9):
     # solve damped least squares
     j_eef_T = torch.transpose(j_eef, 1, 2)
     lmbda = torch.eye(6, device=DEVICE) * (damping ** 2)
-    u = (j_eef_T @ torch.inverse(j_eef @ j_eef_T + lmbda) @ dpose).view(num_envs, 7)
+    u = (j_eef_T @ torch.inverse(j_eef @ j_eef_T + lmbda) @ dpose).view(num_envs, num_arm_dofs)
     return u
 
 def get_shape_map(gym, asset):
