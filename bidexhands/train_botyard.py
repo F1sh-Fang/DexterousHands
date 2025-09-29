@@ -57,7 +57,7 @@ def process_sarl(args, env, cfg_train, logdir):
     if args.max_iterations != -1:
         cfg_train["learn"]["max_iterations"] = args.max_iterations
 
-    project_id = "Dof9_ik_0"
+    project_id = "Dof9_ik_1"
     logdir = "logs/BotyardHandPick/ppo/" + project_id
 
     """Set up the algo system for training or inferencing."""

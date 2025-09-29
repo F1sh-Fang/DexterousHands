@@ -19,7 +19,7 @@ import open3d as o3d
 import trimesh
 import gc
 
-class BotyardHandPick(BaseTask):
+class UrBotyardHandPick(BaseTask):
     @torch.no_grad()
     def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless, agent_index=[[[0, 1, 2, 3, 4, 5]], [[0, 1, 2, 3, 4, 5]]], is_multi_agent=False):
         self.cfg = cfg
@@ -96,7 +96,7 @@ class BotyardHandPick(BaseTask):
         
         # num of obs 
         self.num_robot_obs = 181
-        # action = arm 7 + hand 23 
+        # action = arm 6 + hand 23 
         self.num_point_cloud_feature_dim = 768
         self.num_obs_dict = {
             "point_cloud": self.num_robot_obs + self.num_point_cloud_feature_dim * 3,

@@ -1,9 +1,9 @@
 # if given, will override the device setting in gym. 
 env: 
   env_name: "botyard_hand_pick"
-  numEnvs:  2048 # 512
+  numEnvs:  1024 # 512
   envSpacing: 1.0
-  episodeLength: 1000
+  episodeLength: 800
   enableDebugVis: False
   cameraDebug: False
   pointCloudDebug: False
@@ -19,7 +19,7 @@ env:
   startPositionNoise: 0.005
   startRotationNoise: 0.0
 
-  resetPositionNoise: 0.005
+  resetPositionNoise: 0.2
   resetRotationNoise: 0.0
   resetDofPosRandomInterval: 0.2
   resetDofVelRandomInterval: 0.0

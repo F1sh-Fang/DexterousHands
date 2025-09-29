@@ -16,7 +16,7 @@ def find_latest_checkpoint(path):
         return None
 
 if __name__ == '__main__':
-    project_id = "Dof9_ik_0"
+    project_id = "Dof9_ik_1"
     log_path = "logs/BotyardHandPick/ppo/" + project_id
     first = True
     while True:
