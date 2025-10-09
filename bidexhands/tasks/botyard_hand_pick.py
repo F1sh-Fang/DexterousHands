@@ -363,6 +363,7 @@ class BotyardHandPick(BaseTask):
             rf_id = [self.hand_shape_name_id_map[name] for name in rf_name]
             lf_name = ["lfbase", "lfproximal", "lfmiddle", "lfdistal"]
             lf_id = [self.hand_shape_name_id_map[name] for name in lf_name]
+            tip_id = [self.hand_shape_name_id_map[name] for name in self.fingertips]
             for i in range(len(self.hand_rigid_body_props)):
                 if i in [base_id[0], base_id[1]]:
                     self.hand_rigid_body_props[i].filter = 0b11111
@@ -381,6 +382,8 @@ class BotyardHandPick(BaseTask):
                 if i in finger_id:
                     self.hand_rigid_body_props[i].contact_offset = 0.005
                     self.hand_rigid_body_props[i].rest_offset = 0.00
+                if i in tip_id:
+                    self.hand_rigid_body_props[i].friction = 1.0
             # props[shape_name_id_map['lfdistal']].filter = (1 << 1)
             # props[shape_name_id_map['rfdistal']].filter = (1 << 1)
 
@@ -663,7 +666,11 @@ class BotyardHandPick(BaseTask):
                                            object_start_pose.r.x, object_start_pose.r.y, object_start_pose.r.z, object_start_pose.r.w,
                                            0, 0, 0, 0, 0, 0])
             object_idx = self.gym.get_actor_index(env_ptr, self.object_handle, gymapi.DOMAIN_SIM)
-            
+            object_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, self.object_handle)
+            for object_shape_prop in object_shape_props:
+                object_shape_prop.friction = 0.8
+            self.gym.set_actor_rigid_shape_properties(env_ptr, self.object_handle, object_shape_props)
+
             self.object_indices.append(object_idx)
 
             # add table

@@ -95,7 +95,7 @@ class UrBotyardHandPick(BaseTask):
         print("Obs type:", self.obs_type)
         
         # num of obs 
-        self.num_robot_obs = 181
+        self.num_robot_obs = 179
         # action = arm 6 + hand 23 
         self.num_point_cloud_feature_dim = 768
         self.num_obs_dict = {
@@ -157,11 +157,17 @@ class UrBotyardHandPick(BaseTask):
 
         # create some wrapper tensors for different slices
         self.botyard_hand_default_dof_pos = torch.zeros(self.num_botyard_hand_dofs, dtype=torch.float, device=self.device)
-        self.botyard_hand_default_dof_pos[:7] = torch.tensor([0, -1.3, 0, -2.4, 0, 2.66, 0], dtype=torch.float, device=self.device)
+        self.botyard_hand_default_dof_pos[:6] = torch.tensor([[0, -1.2244, -2.0622, -2.9644, -1.4822, 0]], dtype=torch.float, device=self.device)
+        self.botyard_hand_default_dof_pos[:6] = torch.tensor([-0.1974, -1.3138, -1.9281, -3.0467, -1.7684, 0.0014], dtype=torch.float, device=self.device)
+        self.botyard_hand_default_dof_pos[9:12] = torch.tensor ([1.57/2, 1.57/2, 1.57/2], dtype=torch.float, device=self.device)
+        self.botyard_hand_default_dof_pos[13:16] = torch.tensor([1.57/2, 1.57/2, 1.57/2], dtype=torch.float, device=self.device)
+        self.botyard_hand_default_dof_pos[17:20] = torch.tensor([1.57/2, 1.57/2, 1.57/2], dtype=torch.float, device=self.device)
+        self.botyard_hand_default_dof_pos[21:24] = torch.tensor([1.57/2, 1.57/2, 1.57/2], dtype=torch.float, device=self.device)
+        self.botyard_hand_default_dof_pos[26:28] = torch.tensor([1.57/2, 1.57/2], dtype=torch.float, device=self.device)
         self.ee_default_target_pose = torch.zeros(7, dtype=torch.float, device=self.device)
-        self.ee_default_target_pose = torch.tensor([0.365, 0, 0.809, 0, 0, 0, 1], dtype=torch.float, device=self.device)
-        self.ee_pos_lower_limits = torch.tensor([0.1, -0.7, 0.62], dtype=torch.float, device=self.device)
-        self.ee_pos_upper_limits = torch.tensor([0.85, 0.7, 1.2], dtype=torch.float, device=self.device)
+        self.ee_default_target_pose = torch.tensor([-0.001, -0.217, 1.071, 0, 0, 0, 1], dtype=torch.float, device=self.device)
+        self.ee_pos_lower_limits = torch.tensor([0.1, -0.6, 0.62], dtype=torch.float, device=self.device)
+        self.ee_pos_upper_limits = torch.tensor([0.65, 0.6, 1.2], dtype=torch.float, device=self.device)
 
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.botyard_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, :self.num_botyard_hand_dofs]
@@ -348,9 +354,11 @@ class UrBotyardHandPick(BaseTask):
         if True:#self.hand_rigid_body_props is None:
             self.hand_rigid_body_props = self.gym.get_actor_rigid_shape_properties(env, actor_handle)
             finger_name = ['lfdistal', 'rfdistal', 'mfdistal', 'ffdistal', 'thdistal',
-                        'lfmiddle', 'rfmiddle', 'mfmiddle', 'ffmiddle', 'thmiddle',
-                        'lfproximal', 'rfproximal', 'mfproximal', 'ffproximal', 'thproximal']
+                   'lfmiddle', 'rfmiddle', 'mfmiddle', 'ffmiddle', 'thmiddle',
+                   'lfproximal', 'rfproximal', 'mfproximal', 'ffproximal', 'thproximal']
             finger_id = [self.hand_shape_name_id_map[name] for name in finger_name]
+            mess_name = ['fallink2', 'fallink1','fallink0', 'farlink2', 'farlink1','farlink0','falink2', 'falink1']
+            mess_id = [self.hand_shape_name_id_map[name] for name in mess_name]
             base_name = ['pmbase', 'palm', 'fabase']
             base_id = [self.hand_shape_name_id_map[name] for name in base_name]
             th_name = ["thbase", "thproximal", "thmiddle", "thdistal"]
@@ -376,14 +384,17 @@ class UrBotyardHandPick(BaseTask):
                     self.hand_rigid_body_props[i].filter = (1 << 3)
                 elif i in lf_id:
                     self.hand_rigid_body_props[i].filter = (1 << 4)
+                elif i in mess_id:
+                    self.hand_rigid_body_props[i].filter = (1 << 5) | (1 << 4)
+                elif i in [base_id[2]]:
+                    self.hand_rigid_body_props[i].filter = (1 << 5)
                 else:
                     self.hand_rigid_body_props[i].filter = 0
                 if i in finger_id:
                     self.hand_rigid_body_props[i].contact_offset = 0.005
                     self.hand_rigid_body_props[i].rest_offset = 0.00
-            # props[shape_name_id_map['lfdistal']].filter = (1 << 1)
-            # props[shape_name_id_map['rfdistal']].filter = (1 << 1)
-
+                # props[shape_name_id_map['lfdistal']].filter = (1 << 1)
+                # props[shape_name_id_map['rfdistal']].filter = (1 << 1)
         self.gym.set_actor_rigid_shape_properties(env, actor_handle, self.hand_rigid_body_props) ### (env, index number, properties List)
     
     @torch.no_grad()
@@ -392,12 +403,8 @@ class UrBotyardHandPick(BaseTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
         print("Creating %d environments, spacing %f, num per row %d" % (num_envs, spacing, num_per_row))
         asset_root = "../assets"
-        # allegro_hand_asset_file = "urdf/xarm_description/urdf/xarm6.urdf"
-        # allegro_hand_another_asset_file = "urdf/xarm_description/urdf/xarm6.urdf"
 
-        botyard_hand_asset_file = "botyard/panda_by_description/urdf/panda_by.urdf"
-        # table_texture_files = "../assets/textures/texture_stone_stone_texture_0.jpg"
-        # table_texture_handle = self.gym.create_texture_from_file(self.sim, table_texture_files)
+        botyard_hand_asset_file = "botyard/ur_by_description/urdf/ur_by.urdf"
 
         object_asset_file = self.asset_files_dict[self.object_type]
         object_asset_file = 'botyard/panda_by_description/meshes/object/box_50mm.urdf'
@@ -435,23 +442,9 @@ class UrBotyardHandPick(BaseTask):
         print("self.num_botyard_hand_tendons: ",   self.num_botyard_hand_tendons)
 
         print("hand done")
-
-        # tendon set up
-        limit_stiffness = 3
-        t_damping = 0.1
-        # relevant_tendons = ["robot0:T_FFJ1c", "robot0:T_MFJ1c", "robot0:T_RFJ1c", "robot0:T_LFJ1c"]
-        # a_relevant_tendons = ["robot1:T_FFJ1c", "robot1:T_MFJ1c", "robot1:T_RFJ1c", "robot1:T_LFJ1c"]
-        # tendon_props = self.gym.get_asset_tendon_properties(botyard_hand_asset)
-
-        # for i in range(self.num_botyard_hand_tendons):
-        #     tendon_props[i].limit_stiffness = limit_stiffness
-        #     tendon_props[i].damping = t_damping
-
-        # self.gym.set_asset_tendon_properties(botyard_hand_asset, tendon_props)
         
         self.actuated_dof_indices = [i for i in range(self.num_botyard_hand_dofs)]
 
-        # set allegro_hand dof properties
         botyard_hand_dof_props = self.gym.get_asset_dof_properties(botyard_hand_asset)
 
         self.botyard_hand_dof_lower_limits = []
@@ -470,16 +463,16 @@ class UrBotyardHandPick(BaseTask):
             self.botyard_hand_dof_default_pos.append(0.0)
             self.botyard_hand_dof_default_vel.append(0.0)
 
-        x_arm_dof_effort = to_torch([87, 87, 87, 87, 12, 12, 12], dtype=torch.float, device=self.device)
+        arm_dof_effort = to_torch([310,310, 310, 54, 54, 54], dtype=torch.float, device=self.device)
 
-        for i in range(0, 7):
+        for i in range(0, 6):
             botyard_hand_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
             botyard_hand_dof_props['stiffness'][i] = 10000
             botyard_hand_dof_props['damping'][i] = 200
-            # botyard_hand_dof_props['effort'][i] = x_arm_dof_effort[i]
+            botyard_hand_dof_props['effort'][i] = arm_dof_effort[i]
             # botyard_hand_dof_props['armature'][i] = 0.01
 
-        for i in range(7, self.num_botyard_hand_dofs):
+        for i in range(6, self.num_botyard_hand_dofs):
             botyard_hand_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
             botyard_hand_dof_props['stiffness'][i] = 100
             botyard_hand_dof_props['damping'][i] = 20
@@ -507,7 +500,7 @@ class UrBotyardHandPick(BaseTask):
         goal_asset = self.gym.load_asset(self.sim, asset_root, object_asset_file, object_asset_options)
 
         # create table asset
-        table_dims = gymapi.Vec3(0.65, 1.5, 0.6)
+        table_dims = gymapi.Vec3(1.6, 1.6, 0.6)
         self.table_height = table_dims.z
         table_asset_options = gymapi.AssetOptions()
         table_asset_options.fix_base_link = True
@@ -520,18 +513,18 @@ class UrBotyardHandPick(BaseTask):
 
         botyard_hand_start_pose = gymapi.Transform()
         botyard_hand_start_pose.p = gymapi.Vec3(0, 0, 0)
-        botyard_hand_start_pose.p.z = 0 #table_dims.z
-        botyard_hand_start_pose.p.x = -0.05
-        botyard_hand_start_pose.r = gymapi.Quat().from_euler_zyx(0, 0, 0)
+        botyard_hand_start_pose.p.z = table_dims.z
+        botyard_hand_start_pose.p.x = -0.6
+        botyard_hand_start_pose.r = gymapi.Quat().from_euler_zyx(0, 0, 3.14159265357)
         
         table_pose = gymapi.Transform()
-        table_pose.p = gymapi.Vec3(0.65, 0.0, 0.5 * table_dims.z)
+        table_pose.p = gymapi.Vec3(0.0, 0.0, 0.5 * table_dims.z)
         table_pose.r = gymapi.Quat().from_euler_zyx(-0., 0, 0)
 
         object_start_pose = gymapi.Transform()
         object_start_pose.p = gymapi.Vec3()
         object_start_pose.p.x = table_pose.p.x
-        pose_dx, pose_dy, pose_dz = 0., 0., 0.05
+        pose_dx, pose_dy, pose_dz = 0.5, 0., 0.05
 
         object_start_pose.p.x = table_pose.p.x + pose_dx
         object_start_pose.p.y = table_pose.p.y + pose_dy
@@ -581,7 +574,7 @@ class UrBotyardHandPick(BaseTask):
         self.body_handles = {}
 
         self.num_surface_samples = 512 
-        fingertip_mesh_path_list = ["../assets/botyard/panda_by_description/meshes/botyard/" + name + ".STL" for name in self.fingertips]
+        fingertip_mesh_path_list = ["../assets/botyard/ur_by_description/meshes/botyard/" + name + ".STL" for name in self.fingertips]
         # object_mesh_path = "../assets/botyard/panda_by_description/meshes/object/009_gelatin_box/google_16k/nontextured.stl" 
         object_mesh_path = "../assets/botyard/panda_by_description/meshes/object/box_50mm/box.stl" 
         all_fingertips_vertices_local_list = []
@@ -726,11 +719,11 @@ class UrBotyardHandPick(BaseTask):
         print(self.body_vertices.keys())
 
         ############ ik #####################
-        self.num_ik_arm_dof = 9
+        self.num_ik_arm_dof = 6
         _jacobian = self.gym.acquire_jacobian_tensor(self.sim, "hand")
         self.jacobian = gymtorch.wrap_tensor(_jacobian)
         self.j_eef = self.jacobian[:, self.ee_handle - 1, :, :self.num_ik_arm_dof]
-        self.hand_ik_damping = 0.1
+        self.hand_ik_damping = 0.15
 
     @torch.no_grad()
     def compute_reward(self, actions, visdebug = False):
@@ -1074,22 +1067,22 @@ class UrBotyardHandPick(BaseTask):
         def map_finger_action_to_action():
             tarfin = torch.zeros_like(targets)
             ## FAJ31
-            if self.num_ik_arm_dof == 7:
-                tarfin[:,7:9]  = self.actions[:,6:8]
+            if self.num_ik_arm_dof == 6:
+                tarfin[:,6:8]  = self.actions[:,6:8]
             ## FFJ 432  FFJ1
-            tarfin[:,9:12] = self.actions[:,8:11]
-            tarfin[:,12]   = self.actions[:,10]
+            tarfin[:,8:11] = self.actions[:,8:11]
+            tarfin[:,11]   = self.actions[:,10]
             ## LFJ 432  LFJ1
-            tarfin[:,13:16] = self.actions[:,11:14]
-            tarfin[:,16]    = self.actions[:,13]
+            tarfin[:,12:15] = self.actions[:,11:14]
+            tarfin[:,15]    = self.actions[:,13]
             ## MFJ 432  MFJ1
-            tarfin[:,17:20] = self.actions[:,14:17]
-            tarfin[:,20]    = self.actions[:,16]
+            tarfin[:,16:19] = self.actions[:,14:17]
+            tarfin[:,19]    = self.actions[:,16]
             ## RFJ 432  RFJ1
-            tarfin[:,21:24] = self.actions[:,17:20]
-            tarfin[:,24]    = self.actions[:,19]
+            tarfin[:,20:23] = self.actions[:,17:20]
+            tarfin[:,23]    = self.actions[:,19]
             ## THJ 4321
-            tarfin[:,25:29] = self.actions[:,20:24]
+            tarfin[:,24:28] = self.actions[:,20:24]
             return tarfin
 
         if self.use_relative_control:
@@ -1367,7 +1360,7 @@ def compute_surface_distance_jit(poses_a, poses_b, vertices_a, vertices_b):
 
 if __name__ ==  "__main__":
     import bidexhands as bi
-    env_name = 'BotyardHandPick'
+    env_name = 'UrBotyardHandPick'
     algo = "ppo"
     env = bi.make(env_name, algo)
 

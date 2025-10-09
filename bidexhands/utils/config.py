@@ -70,6 +70,9 @@ def retrieve_cfg(args, use_rlg_config=False):
     elif args.task in ["BotyardHandPick"]:
         return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/botyard_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
     
+    elif args.task in ["UrBotyardHandPick"]:
+        return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/ur_by_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
+    
     elif args.task in ["ShadowHandLiftUnderarm"]:
         return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/lift_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
 

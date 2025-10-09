@@ -380,7 +380,7 @@ def main_ur():
     for i in range(0, 6):
         # dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
         dof_props['stiffness'][i] = 10000
-        dof_props['damping'][i] = 200
+        dof_props['damping'][i] = 300
         dof_props['effort'][i] = arm_dof_effort[i]
         # dof_props['armature'][i] = 0.01
     
@@ -399,12 +399,12 @@ def main_ur():
     # --- 3. 创建环境和Actor ---
     env = gym.create_env(sim, gymapi.Vec3(-2,-2,0), gymapi.Vec3(2,2,2), 1)
     pose = gymapi.Transform()
-    pose.p = gymapi.Vec3(-0.05, 0.0, 0.6)
+    pose.p = gymapi.Vec3(-0.6, 0.0, 0.6)
     pose.r = gymapi.Quat().from_euler_zyx(0, 0, 3.141592653589793)
     actor_handle = gym.create_actor(env, asset, pose, "hand", 0, 0, 0)
     gym.set_actor_dof_properties(env, actor_handle, dof_props)
 
-    table_dims = gymapi.Vec3(0.65, 1.5, 0.6)
+    table_dims = gymapi.Vec3(1.6, 1.6, 0.6)
     table_asset_options = gymapi.AssetOptions()
     table_asset_options.fix_base_link = True
     table_asset_options.flip_visual_attachments = True
@@ -413,7 +413,7 @@ def main_ur():
     table_asset_options.thickness = 0.001
     table_asset = gym.create_box(sim, table_dims.x, table_dims.y, table_dims.z, table_asset_options)
     table_pose = gymapi.Transform()
-    table_pose.p = gymapi.Vec3(0.65, 0.0, 0.5 * table_dims.z)
+    table_pose.p = gymapi.Vec3(0.0, 0.0, 0.5 * table_dims.z)
     table_pose.r = gymapi.Quat().from_euler_zyx(-0., 0, 0)
     table_handle = gym.create_actor(env, table_asset, table_pose, "table", 0, 0, 0)
 
@@ -421,15 +421,15 @@ def main_ur():
     asset_options = gymapi.AssetOptions()
     asset_options.density = 1000.0
     asset_options.thickness = 0.001
-    asset_options.disable_gravity = True
+    asset_options.disable_gravity = False
     asset_options.fix_base_link = False
     box_asset = gym.create_box(sim, box_size, box_size, box_size, asset_options)
     box_pose = gymapi.Transform()
-    box_pose.p.x = table_pose.p.x
+    box_pose.p.x = table_pose.p.x + 0.5
     box_pose.p.y = table_pose.p.y
     box_pose.p.z = table_dims.z + 0.7 * box_size
     box_pose.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), np.random.uniform(-math.pi, math.pi))
-    # box_handle = gym.create_actor(env, box_asset, box_pose, "box", 0, 0, 0)
+    box_handle = gym.create_actor(env, box_asset, box_pose, "box", 0, 0, 0)
 
     # --- 4. 准备张量 ---
     gym.refresh_dof_state_tensor(sim)
@@ -611,7 +611,7 @@ def main_ur():
         ee_target_quat = torch.tensor(R.from_euler("xyz",ee_target_pose[3:6],degrees=False).as_quat())
         ee_dpose[0:3] -= ee_pos
         ee_dpose[3:6] = orientation_error(ee_target_quat.unsqueeze(0),ee_quat.unsqueeze(0))
-        dof_targets[:num_arm_dofs] = dof_state[:num_arm_dofs, 0] + control_ik(ee_dpose,j_eef, num_arm_dofs=num_arm_dofs)
+        dof_targets[:num_arm_dofs] = dof_state[:num_arm_dofs, 0] + control_ik(ee_dpose,j_eef, num_arm_dofs=num_arm_dofs, damping=0.15)
         dof_targets = tensor_clamp(dof_targets, dof_lower_limits, dof_upper_limits)
         gym.set_dof_position_target_tensor(sim, gymtorch.unwrap_tensor(dof_targets))
         
