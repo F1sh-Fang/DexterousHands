@@ -52,7 +52,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/fabase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/fabase.STL"/>
       </geometry>
       <!-- 使用外部定义的 material -->
       <material name="black"/>
@@ -60,7 +60,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/fabase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/fabase.STL"/>
       </geometry>
     </collision>
   </link>
@@ -73,14 +73,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/fallink2.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/fallink2.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/fallink2.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/fallink2.STL"/>
       </geometry>
     </collision>
   </link>
@@ -100,14 +100,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/fallink1.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/fallink1.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/fallink1.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/fallink1.STL"/>
       </geometry>
     </collision>
   </link>
@@ -134,14 +134,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/farlink2.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/farlink2.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/farlink2.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/farlink2.STL"/>
       </geometry>
     </collision>
   </link>
@@ -161,14 +161,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/farlink1.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/farlink1.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/farlink1.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/farlink1.STL"/>
       </geometry>
     </collision>
   </link>
@@ -195,14 +195,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/falink2.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/falink2.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/falink2.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/falink2.STL"/>
       </geometry>
     </collision>
   </link>
@@ -222,14 +222,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/falink1.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/falink1.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/falink1.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/falink1.STL"/>
       </geometry>
     </collision>
   </link>
@@ -249,14 +249,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/pmbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/pmbase.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/pmbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/pmbase.STL"/>
       </geometry>
     </collision>
   </link>
@@ -276,14 +276,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="-0.0115 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/fallink0.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/fallink0.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="-0.0115 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/fallink0.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/fallink0.STL"/>
       </geometry>
     </collision>
   </link>
@@ -309,14 +309,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0.0115 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/farlink0.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/farlink0.STL"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0.0115 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/farlink0.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/farlink0.STL"/>
       </geometry>
     </collision>
   </link>
@@ -350,7 +350,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/palm.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/palm.STL"/>
       </geometry>
       <!-- 使用外部定义的 material -->
       <material name="grey"/>
@@ -358,7 +358,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/palm.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/palm.STL"/>
       </geometry>
     </collision>
   </link>
@@ -371,14 +371,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/thbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/thbase.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/thbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/thbase.STL"/>
       </geometry>
     </collision>
   </link>
@@ -398,14 +398,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/thproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/thproximal.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/thproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/thproximal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -425,14 +425,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/thmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/thmiddle.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/thmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/thmiddle.STL"/>
       </geometry>
     </collision>
   </link>
@@ -452,14 +452,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/thdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/thdistal.STL"/>
       </geometry>
       <material name="brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/thdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/thdistal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -486,14 +486,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/ffbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/ffbase.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/ffbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/ffbase.STL"/>
       </geometry>
     </collision>
   </link>
@@ -513,14 +513,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/ffproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/ffproximal.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/ffproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/ffproximal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -540,14 +540,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/ffmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/ffmiddle.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/ffmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/ffmiddle.STL"/>
       </geometry>
     </collision>
   </link>
@@ -567,14 +567,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/ffdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/ffdistal.STL"/>
       </geometry>
       <material name="brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/ffdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/ffdistal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -602,14 +602,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/mfbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/mfbase.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/mfbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/mfbase.STL"/>
       </geometry>
     </collision>
   </link>
@@ -629,14 +629,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/mfproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/mfproximal.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/mfproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/mfproximal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -656,14 +656,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/mfmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/mfmiddle.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/mfmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/mfmiddle.STL"/>
       </geometry>
     </collision>
   </link>
@@ -683,14 +683,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/mfdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/mfdistal.STL"/>
       </geometry>
       <material name="brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/mfdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/mfdistal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -718,14 +718,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/rfbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/rfbase.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/rfbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/rfbase.STL"/>
       </geometry>
     </collision>
   </link>
@@ -745,14 +745,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/rfproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/rfproximal.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/rfproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/rfproximal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -772,14 +772,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/rfmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/rfmiddle.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/rfmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/rfmiddle.STL"/>
       </geometry>
     </collision>
   </link>
@@ -799,14 +799,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/rfdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/rfdistal.STL"/>
       </geometry>
       <material name="brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/rfdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/rfdistal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -834,14 +834,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/lfbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/lfbase.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/lfbase.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/lfbase.STL"/>
       </geometry>
     </collision>
   </link>
@@ -861,14 +861,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/lfproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/lfproximal.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/lfproximal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/lfproximal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -888,14 +888,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/lfmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/lfmiddle.STL"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/lfmiddle.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/lfmiddle.STL"/>
       </geometry>
     </collision>
   </link>
@@ -915,14 +915,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/lfdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/lfdistal.STL"/>
       </geometry>
       <material name="brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dexhand_description/meshes/lfdistal.STL"/>
+        <mesh filename="package://ur_by_description/meshes/botyard/lfdistal.STL"/>
       </geometry>
     </collision>
   </link>
@@ -943,11 +943,11 @@
   </joint>
   <link name="central"/>
   <joint name="CJ0" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0.02335 0.045"/>
+    <origin rpy="0 -1.57 1.57" xyz="0 0.02335 0.045"/>
     <parent link="palm"/>
     <child link="central"/>
     <axis xyz="0 0 0"/>
   </joint>
   <!-- construct pure URDF end -->
-  <!-- construct pure URDF end -->
 </robot>
+

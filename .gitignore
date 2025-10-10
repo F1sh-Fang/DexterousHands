@@ -128,11 +128,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-bidexhands/logs/
-bidexhands/runs/
+dexhand/logs/
+dexhand/runs/
 # contact buffer and other info created in running
-bidexhands/runs
+dexhand/runs
 # too large files in assets
 assets/dataset
 
-bidexhands.egg-info
+dexhand.egg-info
